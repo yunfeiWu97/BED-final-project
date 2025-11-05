@@ -2,6 +2,10 @@ import express, { Express } from "express";
 import errorHandler from "./api/v1/middleware/errorHandler";
 import { HTTP_STATUS } from "./constants/httpConstants";
 
+import employerRoutes from "./api/v1/routes/employerRoutes";
+import shiftRoutes from "./api/v1/routes/shiftRoutes";
+import adjustmentRoutes from "./api/v1/routes/adjustmentRoutes";
+
 /**
  * Express application instance.
  */
@@ -45,6 +49,24 @@ app.get("/api/v1/health", (_request, response) => {
   };
   response.status(HTTP_STATUS.OK).json(healthData);
 });
+
+/**
+ * Employers resource routes.
+ * All endpoints under /api/v1/employers.
+ */
+app.use("/api/v1/employers", employerRoutes);
+
+/**
+ * Shifts resource routes.
+ * All endpoints under /api/v1/shifts.
+ */
+app.use("/api/v1/shifts", shiftRoutes);
+
+/**
+ * Adjustments resource routes.
+ * All endpoints under /api/v1/adjustments.
+ */
+app.use("/api/v1/adjustments", adjustmentRoutes);
 
 // -------- Error handling needs to be used last --------
 app.use(errorHandler);
