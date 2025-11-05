@@ -1,12 +1,13 @@
+// tests/services/employerService.test.ts
 import * as employerService from "../../src/api/v1/services/employerService";
-import * as repo from "../../src/api/v1/repositories/firestoreRepository";
+import * as firestoreRepository from "../../src/api/v1/repositories/firestoreRepository";
 import { Employer } from "../../src/api/v1/models/employerModel";
 
-const OWNER = "demo-user";
-const OTHER = "someone-else";
+const OWNER_USER_ID = "demo-user";
+const OTHER_USER_ID = "someone-else";
 
-const baseEmployer: Omit<Employer, "id"> = {
-  ownerUserId: OWNER,
+const baseEmployerWithoutId: Omit<Employer, "id"> = {
+  ownerUserId: OWNER_USER_ID,
   name: "RRC",
   hourlyRate: 20,
   createdAt: new Date("2025-01-01T00:00:00Z"),
@@ -18,101 +19,122 @@ describe("employerService", () => {
     jest.clearAllMocks();
   });
 
-  test("getAllEmployers: returns only current user's employers", async () => {
-    // Arrange
-    const docs = [
-      { id: "a1", data: () => ({ ...baseEmployer }) },
-      { id: "b2", data: () => ({ ...baseEmployer, ownerUserId: OTHER }) },
+  test("getAllEmployers: returns only the current user's employers", async () => {
+    const documents = [
+      { id: "a1", data: () => ({ ...baseEmployerWithoutId }) },
+      {
+        id: "b2",
+        data: () => ({ ...baseEmployerWithoutId, ownerUserId: OTHER_USER_ID }),
+      },
     ];
-    jest.spyOn(repo, "getDocuments").mockResolvedValue({ docs } as any);
+    jest
+      .spyOn(firestoreRepository, "getDocuments")
+      .mockResolvedValue({ docs: documents } as any);
 
-    // Act
-    const result = await employerService.getAllEmployers(OWNER);
+    const result = await employerService.getAllEmployers(OWNER_USER_ID);
 
-    // Assert
     expect(result).toHaveLength(1);
     expect(result[0].id).toBe("a1");
-    expect(result[0].ownerUserId).toBe(OWNER);
-    expect(result[0].createdAt).toBeInstanceOf(Date);
-    expect(result[0].updatedAt).toBeInstanceOf(Date);
+    expect(result[0].ownerUserId).toBe(OWNER_USER_ID);
+
+    // Robust Date assertions (avoid cross-realm instanceof issues)
+    expect(typeof result[0].createdAt.getTime).toBe("function");
+    expect(Number.isFinite(result[0].createdAt.getTime())).toBe(true);
+    expect(typeof result[0].updatedAt.getTime).toBe("function");
+    expect(Number.isFinite(result[0].updatedAt.getTime())).toBe(true);
   });
 
-  test("createEmployer: creates and returns object with id", async () => {
-    // Arrange
-    jest.spyOn(repo, "createDocument").mockResolvedValue("new-id");
+  test("createEmployer: creates and returns an employer with an id", async () => {
+    jest
+      .spyOn(firestoreRepository, "createDocument")
+      .mockResolvedValue("new-id");
 
-    // Act
-    const created = await employerService.createEmployer(OWNER, {
-      name: "RRC",
-      hourlyRate: 20,
-    });
+    const createdEmployer = await employerService.createEmployer(
+      OWNER_USER_ID,
+      { name: "RRC", hourlyRate: 20 }
+    );
 
-    // Assert
-    expect(created.id).toBe("new-id");
-    expect(created.ownerUserId).toBe(OWNER);
-    expect(created.name).toBe("RRC");
-    expect(created.hourlyRate).toBe(20);
-    expect(created.createdAt).toBeInstanceOf(Date);
-    expect(created.updatedAt).toBeInstanceOf(Date);
+    expect(createdEmployer.id).toBe("new-id");
+    expect(createdEmployer.ownerUserId).toBe(OWNER_USER_ID);
+    expect(createdEmployer.name).toBe("RRC");
+    expect(createdEmployer.hourlyRate).toBe(20);
+
+    expect(typeof createdEmployer.createdAt.getTime).toBe("function");
+    expect(Number.isFinite(createdEmployer.createdAt.getTime())).toBe(true);
+    expect(typeof createdEmployer.updatedAt.getTime).toBe("function");
+    expect(Number.isFinite(createdEmployer.updatedAt.getTime())).toBe(true);
   });
 
-  test("getEmployerById: throws when document not found", async () => {
-    // Arrange
-    jest.spyOn(repo, "getDocumentById").mockResolvedValue(null as any);
+  test("getEmployerById: throws when the document is not found", async () => {
+    jest
+      .spyOn(firestoreRepository, "getDocumentById")
+      .mockResolvedValue(null as any);
 
-    // Act + Assert
     await expect(
-      employerService.getEmployerById(OWNER, "missing-id")
+      employerService.getEmployerById(OWNER_USER_ID, "missing-id")
     ).rejects.toThrow("Employer with id missing-id not found");
   });
 
-  test("getEmployerById: throws when document belongs to another user", async () => {
-    // Arrange
-    const doc = {
+  test("getEmployerById: throws when the document belongs to another user", async () => {
+    const documentSnapshot = {
       exists: true,
       id: "b2",
-      data: () => ({ ...baseEmployer, ownerUserId: OTHER }),
+      data: () => ({ ...baseEmployerWithoutId, ownerUserId: OTHER_USER_ID }),
     };
-    jest.spyOn(repo, "getDocumentById").mockResolvedValue(doc as any);
+    jest
+      .spyOn(firestoreRepository, "getDocumentById")
+      .mockResolvedValue(documentSnapshot as any);
 
-    // Act + Assert
     await expect(
-      employerService.getEmployerById(OWNER, "b2")
+      employerService.getEmployerById(OWNER_USER_ID, "b2")
     ).rejects.toThrow("Employer with id b2 not found");
   });
 
-  test("updateEmployer: merges changes and returns updated object", async () => {
-    // Arrange
-    const doc = { exists: true, id: "a1", data: () => ({ ...baseEmployer }) };
-    jest.spyOn(repo, "getDocumentById").mockResolvedValue(doc as any);
-    const updateSpy = jest.spyOn(repo, "updateDocument").mockResolvedValue();
+  test("updateEmployer: merges changes and returns the updated employer", async () => {
+    const documentSnapshot = {
+      exists: true,
+      id: "a1",
+      data: () => ({ ...baseEmployerWithoutId }),
+    };
+    jest
+      .spyOn(firestoreRepository, "getDocumentById")
+      .mockResolvedValue(documentSnapshot as any);
+    const updateDocumentSpy = jest
+      .spyOn(firestoreRepository, "updateDocument")
+      .mockResolvedValue();
 
-    // Act
-    const updated = await employerService.updateEmployer(OWNER, "a1", {
-      name: "RRC Polytech",
-    });
+    const updatedEmployer = await employerService.updateEmployer(
+      OWNER_USER_ID,
+      "a1",
+      { name: "RRC Polytech" }
+    );
 
-    // Assert
-    expect(updateSpy).toHaveBeenCalledWith(
+    expect(updateDocumentSpy).toHaveBeenCalledWith(
       "employers",
       "a1",
       expect.objectContaining({ name: "RRC Polytech" })
     );
-    expect(updated.id).toBe("a1");
-    expect(updated.name).toBe("RRC Polytech");
-    expect(updated.updatedAt).toBeInstanceOf(Date);
+    expect(updatedEmployer.id).toBe("a1");
+    expect(updatedEmployer.name).toBe("RRC Polytech");
+    expect(typeof updatedEmployer.updatedAt.getTime).toBe("function");
+    expect(Number.isFinite(updatedEmployer.updatedAt.getTime())).toBe(true);
   });
 
-  test("deleteEmployer: deletes employer that belongs to current user", async () => {
-    // Arrange
-    const doc = { exists: true, id: "a1", data: () => ({ ...baseEmployer }) };
-    jest.spyOn(repo, "getDocumentById").mockResolvedValue(doc as any);
-    const del = jest.spyOn(repo, "deleteDocument").mockResolvedValue();
+  test("deleteEmployer: deletes the employer that belongs to the current user", async () => {
+    const documentSnapshot = {
+      exists: true,
+      id: "a1",
+      data: () => ({ ...baseEmployerWithoutId }),
+    };
+    jest
+      .spyOn(firestoreRepository, "getDocumentById")
+      .mockResolvedValue(documentSnapshot as any);
+    const deleteDocumentSpy = jest
+      .spyOn(firestoreRepository, "deleteDocument")
+      .mockResolvedValue();
 
-    // Act
-    await employerService.deleteEmployer(OWNER, "a1");
+    await employerService.deleteEmployer(OWNER_USER_ID, "a1");
 
-    // Assert
-    expect(del).toHaveBeenCalledWith("employers", "a1");
+    expect(deleteDocumentSpy).toHaveBeenCalledWith("employers", "a1");
   });
 });
