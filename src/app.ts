@@ -1,15 +1,52 @@
-import express from "express";
-
-const app = express();
-app.use(express.json());
+import express, { Express } from "express";
+import errorHandler from "./api/v1/middleware/errorHandler";
+import { HTTP_STATUS } from "./constants/httpConstants";
 
 /**
- * Health check endpoint.
- * @route GET /api/v1/health
- * @returns 200 OK with a standard response envelope
+ * Express application instance.
  */
-app.get("/api/v1/health", (_req, res) => {
-  res.status(200).json({ status: "success", message: "OK", data: null });
+const app: Express = express();
+
+/**
+ * Interface for server health response.
+ */
+interface HealthCheckResponse {
+  status: string;
+  uptime: number;
+  timestamp: string;
+  version: string;
+}
+
+// -------- Middleware  --------
+app.use(express.json());
+
+// -------- Routes --------
+
+/**
+ * Root endpoint for a quick sanity check.
+ * @route GET /
+ * @returns Plain text greeting.
+ */
+app.get("/", (_request, response) => {
+  response.status(HTTP_STATUS.OK).send("Hello World");
 });
+
+/**
+ * Health check endpoint that returns server status information.
+ * @route GET /api/v1/health
+ * @returns JSON response with server health metrics.
+ */
+app.get("/api/v1/health", (_request, response) => {
+  const healthData: HealthCheckResponse = {
+    status: "OK",
+    uptime: process.uptime(),
+    timestamp: new Date().toISOString(),
+    version: "1.0.0",
+  };
+  response.status(HTTP_STATUS.OK).json(healthData);
+});
+
+// -------- Error handling needs to be used last --------
+app.use(errorHandler);
 
 export default app;
