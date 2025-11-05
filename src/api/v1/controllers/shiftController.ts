@@ -1,6 +1,7 @@
 import { Request, Response, NextFunction } from "express";
 import { HTTP_STATUS } from "../../../constants/httpConstants";
 import { successResponse } from "../models/responseModel";
+import * as shiftService from "../services/shiftService";
 
 /**
  * Retrieves a list of shifts.
@@ -17,7 +18,7 @@ export const getAllShifts = async (
   next: NextFunction
 ): Promise<void> => {
   try {
-    const shifts: Array<unknown> = [];
+    const shifts = await shiftService.getAllShifts();
     response
       .status(HTTP_STATUS.OK)
       .json(successResponse(shifts, "Shifts successfully retrieved"));
