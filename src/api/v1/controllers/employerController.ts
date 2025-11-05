@@ -1,6 +1,7 @@
 import { Request, Response, NextFunction } from "express";
 import { HTTP_STATUS } from "../../../constants/httpConstants";
 import { successResponse } from "../models/responseModel";
+import * as employerService from "../services/employerService";
 
 /**
  * Retrieves a list of employers.
@@ -17,7 +18,7 @@ export const getAllEmployers = async (
   next: NextFunction
 ): Promise<void> => {
   try {
-    const employers: Array<unknown> = [];
+    const employers = await employerService.getAllEmployers();
     response
       .status(HTTP_STATUS.OK)
       .json(successResponse(employers, "Employers successfully retrieved"));
