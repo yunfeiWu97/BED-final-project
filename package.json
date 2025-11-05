@@ -1,0 +1,30 @@
+{
+  "name": "bed-final-project",
+  "version": "1.0.0",
+  "description": "Git workflow:\r - main: presentation-ready\r - development: integration\r - feature/<issue-id>-<name>: one branch per issue is the plan",
+  "main": "index.js",
+  "scripts": {
+    "dev": "nodemon --exec ts-node src/server.ts",
+    "build": "tsc -p tsconfig.json",
+    "start": "node dist/server.js",
+    "test": "jest",
+    "generate-docs": "ts-node scripts/generate-openapi.ts && npx @redocly/cli build-docs openapi.json --output docs/index.html"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git@github-personal:yunfeiWu97/BED-final-project.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "express": "^5.1.0"
+  },
+  "devDependencies": {
+    "@types/express": "^5.0.5",
+    "@types/node": "^24.10.0",
+    "nodemon": "^3.1.10",
+    "ts-node": "^10.9.2",
+    "typescript": "^5.9.3"
+  }
+}
