@@ -1,18 +1,13 @@
-import { Router, Request, Response } from "express";
-import { successResponse } from "../models/responseModel";
-import { HTTP_STATUS } from "../../../constants/httpConstants";
+import express, { Router } from "express";
+import * as adjustmentController from "../controllers/adjustmentController";
 
-const router: Router = Router();
+const router: Router = express.Router();
 
 /**
  * GET /api/v1/adjustments
- * Placeholder endpoint to verify that the adjustments router is created.
- * @returns 200 OK with a standardized success envelope.
+ * Retrieves a list of adjustments.
+ * Currently returns an empty array as a placeholder.
  */
-router.get("/", (_request: Request, response: Response) => {
-  response
-    .status(HTTP_STATUS.OK)
-    .json(successResponse(null, "Adjustments route is reachable"));
-});
+router.get("/", adjustmentController.getAllAdjustments);
 
 export default router;
