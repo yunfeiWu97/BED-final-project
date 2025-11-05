@@ -1,6 +1,6 @@
 /**
  * Represents an allowance or deduction not tied to hours directly.
- * An adjustment can optionally be linked to an employer or to a specific shift.
+ * An adjustment can optionally be linked to an employer or to a specific shift
  */
 export interface Adjustment {
   /** Unique identifier of the adjustment. */
