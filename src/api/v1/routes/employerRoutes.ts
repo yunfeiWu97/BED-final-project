@@ -1,36 +1,39 @@
 import { Router } from "express";
 import * as employerController from "../controllers/employerController";
+import { validateRequest } from "../middleware/validate";
+import { employerSchemas } from "../validations/employerValidation";
 
 const router: Router = Router();
 
-/**
- * GET /api/v1/employers
- * Lists all employers for the current user.
- */
+/** Lists all employers for the current user. */
 router.get("/", employerController.listEmployers);
 
-/**
- * POST /api/v1/employers
- * Creates a new employer for the current user.
- */
-router.post("/", employerController.createEmployer);
+/** Creates a new employer for the current user. */
+router.post(
+  "/",
+  validateRequest(employerSchemas.create),
+  employerController.createEmployer
+);
 
-/**
- * GET /api/v1/employers/:id
- * Retrieves one employer by id (must belong to current user).
- */
-router.get("/:id", employerController.getEmployer);
+/** Retrieves one employer by id (must belong to current user). */
+router.get(
+  "/:id",
+  validateRequest(employerSchemas.paramsWithId),
+  employerController.getEmployer
+);
 
-/**
- * PUT /api/v1/employers/:id
- * Updates an employer (must belong to current user).
- */
-router.put("/:id", employerController.updateEmployer);
+/** Updates an employer (must belong to current user). */
+router.put(
+  "/:id",
+  validateRequest(employerSchemas.update),
+  employerController.updateEmployer
+);
 
-/**
- * DELETE /api/v1/employers/:id
- * Deletes an employer (must belong to current user).
- */
-router.delete("/:id", employerController.deleteEmployer);
+/** Deletes an employer (must belong to current user). */
+router.delete(
+  "/:id",
+  validateRequest(employerSchemas.paramsWithId),
+  employerController.deleteEmployer
+);
 
 export default router;
