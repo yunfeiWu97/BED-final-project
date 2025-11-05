@@ -1,5 +1,5 @@
-import { Router, Request, Response } from "express";
-import { EmployerController } from "../controllers/employerController";
+import express, { Router } from "express";
+import * as employerController from "../controllers/employerController";
 
 const router: Router = Router();
 
@@ -8,6 +8,6 @@ const router: Router = Router();
  * Lists employers.
  * Currently returns an empty array as a placeholder.
  */
-router.get("/", EmployerController.listEmployers);
+router.get("/", employerController.getAllEmployers);
 
 export default router;
