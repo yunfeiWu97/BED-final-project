@@ -1,18 +1,13 @@
-import { Router, Request, Response } from "express";
-import { successResponse } from "../models/responseModel";
-import { HTTP_STATUS } from "../../../constants/httpConstants";
+import express, { Router } from "express";
+import * as shiftController from "../controllers/shiftController";
 
-const router: Router = Router();
+const router: Router = express.Router();
 
 /**
  * GET /api/v1/shifts
- * Placeholder endpoint to verify that the shifts router is created.
- * @returns 200 OK with a standardized success envelope.
+ * Retrieves a list of shifts.
+ * Currently returns an empty array as a placeholder.
  */
-router.get("/", (_request: Request, response: Response) => {
-  response
-    .status(HTTP_STATUS.OK)
-    .json(successResponse(null, "Shifts route is reachable"));
-});
+router.get("/", shiftController.getAllShifts);
 
 export default router;
