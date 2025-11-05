@@ -1,44 +1,43 @@
 import express, { Router } from "express";
 import * as shiftController from "../controllers/shiftController";
+import { validateRequest } from "../middleware/validate";
+import { shiftSchemas } from "../validations/shiftValidation";
 
 const router: Router = express.Router();
 
-/**
- * Lists shifts for the current user.
- * Optional query parameters:
- *   - employerId: string
- *   - includeTotals: "true" | "false"
- */
-router.get("/", shiftController.getAllShifts);
+/** GET /api/v1/shifts — list shifts (optional employerId, includeTotals) */
+router.get(
+  "/",
+  validateRequest(shiftSchemas.listQuery, { stripQuery: false }),
+  shiftController.getAllShifts
+);
 
-/**
- * Retrieves a single shift by identifier.
- */
-router.get("/:id", shiftController.getShiftById);
+/** GET /api/v1/shifts/:id — get by id */
+router.get(
+  "/:id",
+  validateRequest(shiftSchemas.paramsWithId),
+  shiftController.getShiftById
+);
 
-/**
- * Creates a new shift.
- * Body expects:
- *   - employerId: string
- *   - startTime: ISO string
- *   - endTime: ISO string
- *   - tips?: number
- */
-router.post("/", shiftController.createShift);
+/** POST /api/v1/shifts — create shift */
+router.post(
+  "/",
+  validateRequest(shiftSchemas.create),
+  shiftController.createShift
+);
 
-/**
- * Updates an existing shift (only provided fields will be changed).
- * Body supports any of:
- *   - employerId?: string
- *   - startTime?: ISO string
- *   - endTime?: ISO string
- *   - tips?: number
- */
-router.put("/:id", shiftController.updateShift);
+/** PUT /api/v1/shifts/:id — update shift */
+router.put(
+  "/:id",
+  validateRequest(shiftSchemas.update),
+  shiftController.updateShift
+);
 
-/**
- * Deletes a shift owned by the current user.
- */
-router.delete("/:id", shiftController.deleteShift);
+/** DELETE /api/v1/shifts/:id — delete shift */
+router.delete(
+  "/:id",
+  validateRequest(shiftSchemas.paramsWithId),
+  shiftController.deleteShift
+);
 
 export default router;
