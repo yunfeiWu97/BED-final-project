@@ -1,6 +1,7 @@
 import { Request, Response, NextFunction } from "express";
 import { HTTP_STATUS } from "../../../constants/httpConstants";
 import { successResponse } from "../models/responseModel";
+import * as adjustmentService from "../services/adjustmentService";
 
 /**
  * Retrieves a list of adjustments.
@@ -17,7 +18,7 @@ export const getAllAdjustments = async (
   next: NextFunction
 ): Promise<void> => {
   try {
-    const adjustments: Array<unknown> = [];
+    const adjustments = await adjustmentService.getAllAdjustments();
     response
       .status(HTTP_STATUS.OK)
       .json(successResponse(adjustments, "Adjustments successfully retrieved"));
