@@ -13,18 +13,18 @@ import { errorResponse } from "../models/responseModel";
  * - Logs errors to console for debugging
  * - Manages unexpected errors
  *
- * @param err - The error object passed down the middleware chain
+ * @param error - The error object passed down the middleware chain
  * @param _req - Express request object (unused but required for Express middleware signature)
  * @param res - Express response object
  * @param _next - Express next function (unused but required for Express middleware signature)
  */
 const errorHandler = (
-    err: Error | null,
+    error: Error | null,
     _req: Request,
     res: Response,
     _next: NextFunction
 ): void => {
-    if (!err) {
+    if (!error) {
         console.error("Error: null or undefined error received");
         res.status(HTTP_STATUS.INTERNAL_SERVER_ERROR).json(
             errorResponse("An unexpected error occurred", "UNKNOWN_ERROR")
@@ -34,13 +34,13 @@ const errorHandler = (
     }
 
     // Log the error message and stack trace for debugging
-    console.error(`Error: ${err.message}`);
-    console.error(`Error: ${err.stack}`);
+    console.error(`Error: ${error.message}`);
+    console.error(`Error: ${error.stack}`);
 
     // single check to handle all our custom application errors
-    if (err instanceof AppError) {
+    if (error instanceof AppError) {
         // Handle out custom application errors
-        res.status(err.statusCode).json(errorResponse(err.message, err.code));
+        res.status(error.statusCode).json(errorResponse(error.message, error.code));
     } else {
         res.status(HTTP_STATUS.INTERNAL_SERVER_ERROR).json(
             // Handle unexpected errors e.g. third party library
