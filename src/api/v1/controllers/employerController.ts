@@ -10,7 +10,7 @@ import * as employerService from "../services/employerService";
 * @param request - The Express request.
 */
 const resolveOwnerUserId = (request: Request): string =>
-(request.header("x-demo-user-id") as string) || "demo-user";
+  (request.header("x-demo-user-id") as string) || "demo-user";
 
 /**
  * Lists employers for the current user.

@@ -7,9 +7,8 @@ import * as adjustmentService from "../services/adjustmentService";
  * Temporary helper to obtain the current owner user identifier.
  * Replace with Authentication middleware later (e.g., res.locals.uid).
  */
-const getOwnerUserId = (_req: Request): string => {
-  return "demo-user";
-};
+const resolveOwnerUserId = (request: Request): string =>
+  (request.header("x-demo-user-id") as string) || "demo-user";
 
 /**
  * GET /api/v1/adjustments
