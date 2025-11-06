@@ -1,7 +1,7 @@
 /**
  * Represents a work shift recorded by a specific user for a specific employer.
  * Note: At the API boundary you will accept ISO datetime strings.
- * In the service/repository layer these should be converted to Date objects.
+ * In the service/repository layer these should be converted to Date objects
  */
 export interface Shift {
   /** Unique identifier of the shift. */

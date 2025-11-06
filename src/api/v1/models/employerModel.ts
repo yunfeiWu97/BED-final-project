@@ -1,5 +1,5 @@
 /**
- * Represents an Employer entity owned by a specific user.
+ * Represents an Employer entity owned by a specific user
  */
 export interface Employer {
   /** Unique identifier of the employer. */
