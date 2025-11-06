@@ -4,6 +4,8 @@ import dotenv from "dotenv";
 
 dotenv.config(); // Load environment variables BEFORE any internal imports
 
+import setupSwagger from "../config/swagger";
+
 import errorHandler from "./api/v1/middleware/errorHandler";
 import employerRoutes from "./api/v1/routes/employerRoutes";
 import shiftRoutes from "./api/v1/routes/shiftRoutes";
@@ -70,6 +72,8 @@ app.use("/api/v1/shifts", shiftRoutes);
  * All endpoints under /api/v1/adjustments.
  */
 app.use("/api/v1/adjustments", adjustmentRoutes);
+
+setupSwagger(app);
 
 // -------- Error handling needs to be used last --------
 app.use(errorHandler);
