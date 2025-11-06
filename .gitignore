@@ -4,3 +4,6 @@ dist/
 .vscode/
 firebase-service-account.json
 .env
+
+openapi.json
+docs/
