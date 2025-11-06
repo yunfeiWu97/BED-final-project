@@ -86,6 +86,8 @@ router.get("/", adjustmentController.getAllAdjustments);
  *   post:
  *     summary: Create a new adjustment
  *     tags: [Adjustments]
+ *     security:
+ *       - bearerAuth: []
  *     requestBody:
  *       required: true
  *       content:
@@ -94,12 +96,20 @@ router.get("/", adjustmentController.getAllAdjustments);
  *             type: object
  *             required: [date, amount]
  *             properties:
- *               date:      { type: string, format: date, example: "2025-01-04" }
- *               amount:    { type: number, example: 12.5 }
- *               employerId:{ type: string }
- *               shiftId:   { type: string }
- *               note:      { type: string, maxLength: 200 }
- *             description: Provide at least one of employerId or shiftId
+ *               date:
+ *                 type: string
+ *                 format: date
+ *               amount:
+ *                 type: number
+ *               employerId:
+ *                 type: string
+ *                 nullable: true
+ *               shiftId:
+ *                 type: string
+ *                 nullable: true
+ *               note:
+ *                 type: string
+ *                 maxLength: 200
  *     responses:
  *       201:
  *         description: Created adjustment wrapped in a response envelope
@@ -108,10 +118,11 @@ router.get("/", adjustmentController.getAllAdjustments);
  *             schema:
  *               type: object
  *               properties:
- *                 status:  { type: string, example: success }
- *                 data:    { $ref: "#/components/schemas/Adjustment" }
- *                 message: { type: string, example: Adjustment created successfully }
- *       400: { description: Validation error }
+ *                 status: { type: string, example: success }
+ *                 data:   { $ref: '#/components/schemas/Adjustment' }
+ *                 message:{ type: string, example: Adjustment created successfully }
+ *       400:
+ *         description: Validation error
  */
 router.post("/", validateRequest(adjustmentSchemas.create), adjustmentController.createAdjustment);
 
@@ -147,6 +158,8 @@ router.get("/:id", validateRequest(adjustmentSchemas.paramsWithId), adjustmentCo
  *   put:
  *     summary: Update an adjustment
  *     tags: [Adjustments]
+ *     security:
+ *       - bearerAuth: []
  *     parameters:
  *       - in: path
  *         name: id
@@ -159,24 +172,27 @@ router.get("/:id", validateRequest(adjustmentSchemas.paramsWithId), adjustmentCo
  *           schema:
  *             type: object
  *             properties:
- *               date:      { type: string, format: date }
- *               amount:    { type: number }
- *               employerId:{ type: string }
- *               shiftId:   { type: string }
- *               note:      { type: string, maxLength: 200 }
+ *               date:
+ *                 type: string
+ *                 format: date
+ *               amount:
+ *                 type: number
+ *               employerId:
+ *                 type: string
+ *                 nullable: true
+ *               shiftId:
+ *                 type: string
+ *                 nullable: true
+ *               note:
+ *                 type: string
+ *                 maxLength: 200
  *     responses:
  *       200:
  *         description: Updated adjustment wrapped in a response envelope
- *         content:
- *           application/json:
- *             schema:
- *               type: object
- *               properties:
- *                 status:  { type: string, example: success }
- *                 data:    { $ref: "#/components/schemas/Adjustment" }
- *                 message: { type: string, example: Adjustment updated successfully }
- *       400: { description: Validation error }
- *       404: { description: Not found }
+ *       400:
+ *         description: Validation error
+ *       404:
+ *         description: Not found
  */
 router.put("/:id", validateRequest(adjustmentSchemas.update), adjustmentController.updateAdjustment);
 

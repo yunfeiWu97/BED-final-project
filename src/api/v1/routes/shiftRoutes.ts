@@ -62,35 +62,22 @@ const router: Router = express.Router();
  *   get:
  *     summary: List shifts for the current user
  *     tags: [Shifts]
+ *     security:
+ *       - bearerAuth: []
  *     parameters:
  *       - in: query
  *         name: employerId
  *         schema: { type: string }
- *         required: false
  *         description: Filter by employer id
  *       - in: query
  *         name: includeTotals
- *         schema: { type: string, enum: ["true", "false"] }
- *         required: false
- *         description: When "true", include daily/monthly hour totals
+ *         schema:
+ *           type: boolean
+ *           default: false
+ *         description: When true, include daily/monthly hour totals
  *     responses:
  *       200:
  *         description: Shifts (and optional totals) wrapped in a standard response
- *         content:
- *           application/json:
- *             schema:
- *               type: object
- *               properties:
- *                 status: { type: string, example: success }
- *                 data:
- *                   type: object
- *                   properties:
- *                     items:
- *                       type: array
- *                       items: { $ref: "#/components/schemas/Shift" }
- *                     totals:
- *                       $ref: "#/components/schemas/ShiftTotals"
- *                 message: { type: string, example: Shifts successfully retrieved }
  */
 router.get(
   "/",
