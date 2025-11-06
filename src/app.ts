@@ -1,7 +1,10 @@
 import express, { Express } from "express";
-import errorHandler from "./api/v1/middleware/errorHandler";
 import { HTTP_STATUS } from "./constants/httpConstants";
+import dotenv from "dotenv";
 
+dotenv.config(); // Load environment variables BEFORE any internal imports
+
+import errorHandler from "./api/v1/middleware/errorHandler";
 import employerRoutes from "./api/v1/routes/employerRoutes";
 import shiftRoutes from "./api/v1/routes/shiftRoutes";
 import adjustmentRoutes from "./api/v1/routes/adjustmentRoutes";
