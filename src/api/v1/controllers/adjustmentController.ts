@@ -21,7 +21,7 @@ export const getAllAdjustments = async (
   next: NextFunction
 ): Promise<void> => {
   try {
-    const ownerUserId = getOwnerUserId(req);
+    const ownerUserId = resolveOwnerUserId(req);
     const employerId =
       typeof req.query.employerId === "string" ? req.query.employerId : undefined;
     const shiftId =
@@ -50,7 +50,7 @@ export const getAdjustmentById = async (
   next: NextFunction
 ): Promise<void> => {
   try {
-    const ownerUserId = getOwnerUserId(req);
+    const ownerUserId = resolveOwnerUserId(req);
     const { id } = req.params;
 
     const item = await adjustmentService.getAdjustmentById(ownerUserId, id);
@@ -73,7 +73,7 @@ export const createAdjustment = async (
   next: NextFunction
 ): Promise<void> => {
   try {
-    const ownerUserId = getOwnerUserId(req);
+    const ownerUserId = resolveOwnerUserId(req);
     const { date, amount, employerId, shiftId, note } = req.body;
 
     const created = await adjustmentService.createAdjustment(ownerUserId, {
@@ -102,7 +102,7 @@ export const updateAdjustment = async (
   next: NextFunction
 ): Promise<void> => {
   try {
-    const ownerUserId = getOwnerUserId(req);
+    const ownerUserId = resolveOwnerUserId(req);
     const { id } = req.params;
     const { date, amount, employerId, shiftId, note } = req.body;
 
@@ -132,7 +132,7 @@ export const deleteAdjustment = async (
   next: NextFunction
 ): Promise<void> => {
   try {
-    const ownerUserId = getOwnerUserId(req);
+    const ownerUserId = resolveOwnerUserId(req);
     const { id } = req.params;
 
     await adjustmentService.deleteAdjustment(ownerUserId, id);
