@@ -4,6 +4,10 @@ import dotenv from "dotenv";
 
 dotenv.config(); // Load environment variables BEFORE any internal imports
 
+import helmet from "helmet";
+import cors from "cors";
+import { getHelmetConfig } from "../config/helmetConfig";
+import { getCorsConfig } from "../config/corsConfig";
 import setupSwagger from "../config/swagger";
 
 import errorHandler from "./api/v1/middleware/errorHandler";
@@ -16,15 +20,10 @@ import adjustmentRoutes from "./api/v1/routes/adjustmentRoutes";
  */
 const app: Express = express();
 
-/**
- * Interface for server health response.
- */
-interface HealthCheckResponse {
-  status: string;
-  uptime: number;
-  timestamp: string;
-  version: string;
-}
+app.use(helmet());
+app.use(helmet(getHelmetConfig()));
+app.use(cors());
+app.use(cors(getCorsConfig()));
 
 // -------- Middleware  --------
 app.use(express.json());
@@ -39,6 +38,17 @@ app.use(express.json());
 app.get("/", (_request, response) => {
   response.status(HTTP_STATUS.OK).send("Hello World");
 });
+
+/**
+ * Interface for server health response.
+ */
+interface HealthCheckResponse {
+  status: string;
+  uptime: number;
+  timestamp: string;
+  version: string;
+}
+
 
 /**
  * Health check endpoint that returns server status information.
