@@ -4,25 +4,137 @@ import { successResponse } from "../models/responseModel";
 import * as employerService from "../services/employerService";
 
 /**
- * Retrieves a list of employers.
- * Currently returns an empty array as a placeholder.
- *
- * @param request - Express request object.
- * @param response - Express response object.
- * @param next - Express next function for error propagation.
- * @returns Sends a 200 OK response with a standardized success envelope.
+ * TEMP: Resolve current user id. wait for authenticate middleware
  */
-export const getAllEmployers = async (
+const resolveOwnerUserId = (_request: Request): string => {
+  return "demo-user";
+};
+
+/**
+ * Lists employers for the current user.
+ * @param request - Express request
+ * @param response - Express response
+ * @param next - Express next function
+ */
+export const listEmployers = async (
   request: Request,
   response: Response,
   next: NextFunction
 ): Promise<void> => {
   try {
-    const employers = await employerService.getAllEmployers();
+    const ownerUserId: string = resolveOwnerUserId(request);
+    const employers = await employerService.getAllEmployers(ownerUserId);
     response
       .status(HTTP_STATUS.OK)
       .json(successResponse(employers, "Employers successfully retrieved"));
   } catch (error: unknown) {
-    next(error as Error);
+    next(error);
+  }
+};
+
+/**
+ * Creates a new employer for the current user.
+ * @param request - Express request
+ * @param response - Express response
+ * @param next - Express next function
+ */
+export const createEmployer = async (
+  request: Request,
+  response: Response,
+  next: NextFunction
+): Promise<void> => {
+  try {
+    const ownerUserId: string = resolveOwnerUserId(request);
+    const { name, hourlyRate } = request.body;
+
+    const created = await employerService.createEmployer(ownerUserId, {
+      name,
+      hourlyRate,
+    });
+
+    response
+      .status(HTTP_STATUS.CREATED)
+      .json(successResponse(created, "Employer created successfully"));
+  } catch (error: unknown) {
+    next(error);
+  }
+};
+
+/**
+ * Gets a single employer by id for the current user.
+ * @param request - Express request
+ * @param response - Express response
+ * @param next - Express next function
+ */
+export const getEmployer = async (
+  request: Request,
+  response: Response,
+  next: NextFunction
+): Promise<void> => {
+  try {
+    const ownerUserId: string = resolveOwnerUserId(request);
+    const { id } = request.params;
+
+    const employer = await employerService.getEmployerById(ownerUserId, id);
+
+    response
+      .status(HTTP_STATUS.OK)
+      .json(successResponse(employer, "Employer retrieved successfully"));
+  } catch (error: unknown) {
+    next(error);
+  }
+};
+
+/**
+ * Updates an employer for the current user.
+ * @param request - Express request
+ * @param response - Express response
+ * @param next - Express next function
+ */
+export const updateEmployer = async (
+  request: Request,
+  response: Response,
+  next: NextFunction
+): Promise<void> => {
+  try {
+    const ownerUserId: string = resolveOwnerUserId(request);
+    const { id } = request.params;
+    const { name, hourlyRate } = request.body;
+
+    const updated = await employerService.updateEmployer(ownerUserId, id, {
+      name,
+      hourlyRate,
+    });
+
+    response
+      .status(HTTP_STATUS.OK)
+      .json(successResponse(updated, "Employer updated successfully"));
+  } catch (error: unknown) {
+    next(error);
+  }
+};
+
+/**
+ * Deletes an employer for the current user.
+ * @param request - Express request
+ * @param response - Express response
+ * @param next - Express next function
+ */
+export const deleteEmployer = async (
+  request: Request,
+  response: Response,
+  next: NextFunction
+): Promise<void> => {
+  try {
+    const ownerUserId: string = resolveOwnerUserId(request);
+    const { id } = request.params;
+
+    await employerService.deleteEmployer(ownerUserId, id);
+
+    response
+      .status(HTTP_STATUS.OK)
+      .json(successResponse("Employer deleted successfully"));
+  } catch (error: unknown) {
+    next(error);
   }
 };
