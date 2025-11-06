@@ -15,7 +15,7 @@ const router: Router = Router();
  * /employers:
  *   get:
  *     summary: List employers for the current user
- *     description: Returns employers owned by the caller（Milestone 1 使用固定演示用户）.
+ *     description: Returns employers owned by the caller（Milestone 1）.
  *     tags: [Employers]
  *     responses:
  *       200:
