@@ -4,11 +4,13 @@ import { successResponse } from "../models/responseModel";
 import * as employerService from "../services/employerService";
 
 /**
- * TEMP: Resolve current user id. wait for authenticate middleware
- */
-const resolveOwnerUserId = (_request: Request): string => {
-  return "demo-user";
-};
+* Resolve the current owner user identifier.
+* For Milestone 1 we do not have authentication yet, so we read an optional
+* "x-demo-user-id" header and fall back to "demo-user".
+* @param request - The Express request.
+*/
+const resolveOwnerUserId = (request: Request): string =>
+  (request.header("x-demo-user-id") as string) || "demo-user";
 
 /**
  * Lists employers for the current user.
@@ -133,7 +135,7 @@ export const deleteEmployer = async (
 
     response
       .status(HTTP_STATUS.OK)
-      .json(successResponse("Employer deleted successfully"));
+      .json(successResponse(null, "Employer deleted successfully"));
   } catch (error: unknown) {
     next(error);
   }
