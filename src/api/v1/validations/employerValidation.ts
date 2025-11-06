@@ -2,6 +2,38 @@ import Joi from "joi";
 import { RequestSchema } from "../middleware/validate";
 
 /**
+ * @openapi
+ * tags:
+ *   - name: Employers
+ *     description: Manage employers
+ * components:
+ *   schemas:
+ *     Employer:
+ *       type: object
+ *       required: [id, ownerUserId, name, hourlyRate, createdAt, updatedAt]
+ *       properties:
+ *         id:
+ *           type: string
+ *           example: "emp_123"
+ *         ownerUserId:
+ *           type: string
+ *           example: "demo-user"
+ *         name:
+ *           type: string
+ *           example: "Guarana Restaurant"
+ *         hourlyRate:
+ *           type: number
+ *           example: 16.5
+ *         createdAt:
+ *           type: string
+ *           format: date-time
+ *           example: "2025-01-01T12:00:00Z"
+ *         updatedAt:
+ *           type: string
+ *           format: date-time
+ *           example: "2025-01-01T12:00:00Z"
+ */
+/**
  * Employer validation schemas organized by request type (demo-aligned).
  * - create: POST /api/v1/employers
  * - update: PUT /api/v1/employers/:id
