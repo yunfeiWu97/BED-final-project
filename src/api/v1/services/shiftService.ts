@@ -10,6 +10,7 @@ import {
   CreateShiftInput,
   UpdateShiftInput,
 } from "../models/shiftModel";
+import { Adjustment } from "../models/adjustmentModel";
 
 const COLLECTION_NAME = "shifts";
 
@@ -17,7 +18,10 @@ const COLLECTION_NAME = "shifts";
 export interface ShiftWithComputed extends Shift {
   /** Duration in hours (rounded to 2 decimals). */
   hours: number;
-  /** Effective pay = hours × rate + tips (rounded to 2 decimals). */
+  /**
+   * Effective pay for the shift (rounded to 2 decimals).
+   * Formula: hours × employerRate + tips + sum(attached adjustments).
+   */
   pay: number;
 }
 
@@ -64,18 +68,20 @@ const getEmployerHourlyRate = async (employerId: string): Promise<number> => {
 };
 
 /**
- * Compute {hours, pay} for a shift using the given hourly rate.
+ * Compute base {hours, pay} for a shift using the given hourly rate.
+ * This base pay does NOT include adjustments; callers can add them.
  * @param shift - The shift to evaluate.
  * @param employerRate - Employer hourly rate.
- * @returns An object with hours and pay.
+ * @returns An object with hours and pay (rounded to 2 decimals).
  */
-const computeHoursAndPay = (
+const computeBaseHoursAndPay = (
   shift: Shift,
   employerRate: number
 ): { hours: number; pay: number } => {
   const milliseconds = shift.endTime.getTime() - shift.startTime.getTime();
   const hours = millisecondsToHours(milliseconds);
-  const pay = Math.round((hours * employerRate + (shift.tips ?? 0)) * 100) / 100;
+  const basePayUnrounded = hours * employerRate + (shift.tips ?? 0);
+  const pay = Math.round(basePayUnrounded * 100) / 100;
   return { hours, pay };
 };
 
@@ -105,16 +111,89 @@ const aggregateTotals = (
 };
 
 /**
+ * Add a single (hours, pay) pair into day/month totals using the given date.
+ * @param totals - Totals object to mutate.
+ * @param bucketDate - Date used for day/month bucketing.
+ * @param hours - Hours to add.
+ * @param pay - Pay to add.
+ */
+const addToTotals = (
+  totals: ShiftTotals,
+  bucketDate: Date,
+  hours: number,
+  pay: number
+): void => {
+  const dayKey = formatIsoDate(bucketDate);
+  const monthKey = formatYearMonth(bucketDate);
+
+  const dayEntry = totals.byDay[dayKey] ?? { hours: 0, pay: 0 };
+  totals.byDay[dayKey] = {
+    hours: Math.round((dayEntry.hours + hours) * 100) / 100,
+    pay: Math.round((dayEntry.pay + pay) * 100) / 100,
+  };
+
+  const monthEntry = totals.byMonth[monthKey] ?? { hours: 0, pay: 0 };
+  totals.byMonth[monthKey] = {
+    hours: Math.round((monthEntry.hours + hours) * 100) / 100,
+    pay: Math.round((monthEntry.pay + pay) * 100) / 100,
+  };
+};
+
+/**
+ * Partition all adjustments owned by the user into:
+ *  - attachedToShift: Map<shiftId, sum(amount)>
+ *  - looseByDate:    Map<YYYY-MM-DD, sum(amount)> (no shiftId)
+ *
+ * Rules:
+ *  - Adjustments with shiftId are added into that shift's pay.
+ *  - Adjustments without shiftId do not change any single shift,
+ *    but they must be included in totals' pay (hours unchanged).
+ *
+ * @param ownerUserId - Firebase Authentication user identifier.
+ */
+const partitionAdjustments = async (
+  ownerUserId: string
+): Promise<{
+  attachedToShift: Map<string, number>;
+  looseByDate: Map<string, number>;
+}> => {
+  const snapshot = await getDocuments("adjustments");
+
+  const attachedToShift = new Map<string, number>();
+  const looseByDate = new Map<string, number>();
+
+  for (const document of snapshot.docs) {
+    const raw = document.data() as Omit<Adjustment, "id">;
+    if (raw.ownerUserId !== ownerUserId) continue;
+
+    const amount = Number(raw.amount) || 0;
+    const date = toDateFromUnknown(raw.date);
+
+    if (raw.shiftId) {
+      const previous = attachedToShift.get(raw.shiftId) ?? 0;
+      attachedToShift.set(raw.shiftId, previous + amount);
+    } else {
+      const key = formatIsoDate(date);
+      const previous = looseByDate.get(key) ?? 0;
+      looseByDate.set(key, previous + amount);
+    }
+  }
+
+  return { attachedToShift, looseByDate };
+};
+
+/**
  * Retrieve all shifts for a specific user.
  * Optionally filter by employer and optionally include aggregated totals.
  *
  * Each returned item includes:
  *  - hours: duration in hours
- *  - pay:   hours × employerRate + tips
+ *  - pay:   hours × employerRate + tips + sum(attached adjustments)
  *
  * When includeTotals is true, response also contains:
  *  - totals.byDay[YYYY-MM-DD]  = {hours, pay}
  *  - totals.byMonth[YYYY-MM]   = {hours, pay}
+ *   (loose adjustments without shiftId are added to totals' pay only)
  *
  * @param ownerUserId - Firebase Authentication user identifier of the owner.
  * @param options - Filtering and aggregation options.
@@ -148,32 +227,45 @@ export const getAllShifts = async (
       options?.employerId ? shift.employerId === options.employerId : true
     );
 
-  // Cache employer rates to avoid repeated lookups
+  // Preload adjustments (partitioned) and cache employer rates.
+  const [adjustmentPartitions] = await Promise.all([
+    partitionAdjustments(ownerUserId),
+  ]);
   const employerRateCache = new Map<string, number>();
 
-  const shiftsWithComputed: ShiftWithComputed[] = [];
+  // Build enriched items with attached adjustments applied to pay.
+  const enrichedItems: ShiftWithComputed[] = [];
   for (const shiftItem of userShifts) {
     let employerRate = employerRateCache.get(shiftItem.employerId);
     if (employerRate === undefined) {
       employerRate = await getEmployerHourlyRate(shiftItem.employerId);
       employerRateCache.set(shiftItem.employerId, employerRate);
     }
-    const { hours, pay } = computeHoursAndPay(shiftItem, employerRate);
-    shiftsWithComputed.push({ ...shiftItem, hours, pay });
+
+    const { hours, pay } = computeBaseHoursAndPay(shiftItem, employerRate);
+    const attachedDelta = adjustmentPartitions.attachedToShift.get(shiftItem.id) ?? 0;
+    const finalPay = Math.round((pay + attachedDelta) * 100) / 100;
+
+    enrichedItems.push({ ...shiftItem, hours, pay: finalPay });
   }
 
-  if (options?.includeTotals) {
-    const byDay = aggregateTotals(
-      shiftsWithComputed,
-      (shift) => formatIsoDate(shift.startTime)
-    );
-    const byMonth = aggregateTotals(
-      shiftsWithComputed,
-      (shift) => formatYearMonth(shift.startTime)
-    );
-    return { items: shiftsWithComputed, totals: { byDay, byMonth } };
+  if (!options?.includeTotals) {
+    return { items: enrichedItems };
   }
-  return { items: shiftsWithComputed };
+
+  // Start from shift-based totals.
+  const totals: ShiftTotals = {
+    byDay: aggregateTotals(enrichedItems, (s) => formatIsoDate(s.startTime)),
+    byMonth: aggregateTotals(enrichedItems, (s) => formatYearMonth(s.startTime)),
+  };
+
+  // Add loose adjustments (no shiftId) into totals' pay only (hours remain unchanged).
+  for (const [dayKey, delta] of adjustmentPartitions.looseByDate.entries()) {
+    const bucketDate = new Date(`${dayKey}T00:00:00.000Z`);
+    addToTotals(totals, bucketDate, 0, delta);
+  }
+
+  return { items: enrichedItems, totals };
 };
 
 /**
