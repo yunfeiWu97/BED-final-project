@@ -2,6 +2,7 @@ import { Router } from "express";
 import * as employerController from "../controllers/employerController";
 import { validateRequest } from "../middleware/validate";
 import { employerSchemas } from "../validations/employerValidation";
+import { writeLimiter } from "../../../../config/rateLimitConfig"; 
 
 const router: Router = Router();
 
@@ -170,6 +171,7 @@ router.get(
  */
 router.put(
   "/:id",
+  writeLimiter,
   validateRequest(employerSchemas.update),
   employerController.updateEmployer
 );
@@ -209,6 +211,7 @@ router.put(
  */
 router.delete(
   "/:id",
+  writeLimiter,
   validateRequest(employerSchemas.paramsWithId),
   employerController.deleteEmployer
 );
