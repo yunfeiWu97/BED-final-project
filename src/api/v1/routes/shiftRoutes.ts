@@ -2,6 +2,7 @@ import express, { Router } from "express";
 import * as shiftController from "../controllers/shiftController";
 import { validateRequest } from "../middleware/validate";
 import { shiftSchemas } from "../validations/shiftValidation";
+import { writeLimiter } from "../../../../config/rateLimitConfig";
 
 const router: Router = express.Router();
 
@@ -12,58 +13,10 @@ const router: Router = express.Router();
 
 /**
  * @openapi
- * components:
- *   schemas:
- *     Shift:
- *       type: object
- *       required: [id, ownerUserId, employerId, startTime, endTime, createdAt, updatedAt]
- *       properties:
- *         id:
- *           type: string
- *         ownerUserId:
- *           type: string
- *         employerId:
- *           type: string
- *         startTime:
- *           type: string
- *           format: date-time
- *           example: "2025-01-04T09:00:00Z"
- *         endTime:
- *           type: string
- *           format: date-time
- *           example: "2025-01-04T17:00:00Z"
- *         tips:
- *           type: number
- *           example: 25
- *         createdAt:
- *           type: string
- *           format: date-time
- *         updatedAt:
- *           type: string
- *           format: date-time
- *     ShiftTotals:
- *       type: object
- *       properties:
- *         byDay:
- *           type: object
- *           additionalProperties:
- *             type: number
- *             example: 8
- *         byMonth:
- *           type: object
- *           additionalProperties:
- *             type: number
- *             example: 160
- */
-
-/**
- * @openapi
  * /shifts:
  *   get:
  *     summary: List shifts for the current user
  *     tags: [Shifts]
- *     security:
- *       - bearerAuth: []
  *     parameters:
  *       - in: query
  *         name: employerId
@@ -71,19 +24,13 @@ const router: Router = express.Router();
  *         description: Filter by employer id
  *       - in: query
  *         name: includeTotals
- *         schema:
- *           type: boolean
- *           default: false
+ *         schema: { type: boolean, default: false }
  *         description: When true, include daily/monthly hour totals
  *     responses:
  *       200:
  *         description: Shifts (and optional totals) wrapped in a standard response
  */
-router.get(
-  "/",
-  validateRequest(shiftSchemas.listQuery, { stripQuery: false }),
-  shiftController.getAllShifts
-);
+router.get("/", shiftController.getAllShifts);
 
 /**
  * @openapi
@@ -100,23 +47,19 @@ router.get(
  *             required: [employerId, startTime, endTime]
  *             properties:
  *               employerId: { type: string, example: "emp_123" }
- *               startTime: { type: string, format: date-time, example: "2025-01-04T09:00:00Z" }
- *               endTime:   { type: string, format: date-time, example: "2025-01-04T17:00:00Z" }
- *               tips:      { type: number, example: 20 }
+ *               startTime:  { type: string, format: date-time, example: "2025-01-04T09:00:00Z" }
+ *               endTime:    { type: string, format: date-time, example: "2025-01-04T17:00:00Z" }
+ *               tips:       { type: number, example: 20 }
  *     responses:
- *       201:
- *         description: Created shift wrapped in a response envelope
- *         content:
- *           application/json:
- *             schema:
- *               type: object
- *               properties:
- *                 status:  { type: string, example: success }
- *                 data:    { $ref: "#/components/schemas/Shift" }
- *                 message: { type: string, example: Shift created successfully }
+ *       201: { description: Created }
  *       400: { description: Validation error }
  */
-router.post("/", validateRequest(shiftSchemas.create), shiftController.createShift);
+router.post(
+  "/",
+  writeLimiter,
+  validateRequest(shiftSchemas.create),
+  shiftController.createShift
+);
 
 /**
  * @openapi
@@ -130,19 +73,14 @@ router.post("/", validateRequest(shiftSchemas.create), shiftController.createShi
  *         required: true
  *         schema: { type: string }
  *     responses:
- *       200:
- *         description: Shift wrapped in a response envelope
- *         content:
- *           application/json:
- *             schema:
- *               type: object
- *               properties:
- *                 status:  { type: string, example: success }
- *                 data:    { $ref: "#/components/schemas/Shift" }
- *                 message: { type: string, example: Shift successfully retrieved }
+ *       200: { description: OK }
  *       404: { description: Not found }
  */
-router.get("/:id", validateRequest(shiftSchemas.paramsWithId), shiftController.getShiftById);
+router.get(
+  "/:id",
+  validateRequest(shiftSchemas.paramsWithId),
+  shiftController.getShiftById
+);
 
 /**
  * @openapi
@@ -167,20 +105,17 @@ router.get("/:id", validateRequest(shiftSchemas.paramsWithId), shiftController.g
  *               endTime:    { type: string, format: date-time }
  *               tips:       { type: number }
  *     responses:
- *       200:
- *         description: Updated shift wrapped in a response envelope
- *         content:
- *           application/json:
- *             schema:
- *               type: object
- *               properties:
- *                 status:  { type: string, example: success }
- *                 data:    { $ref: "#/components/schemas/Shift" }
- *                 message: { type: string, example: Shift updated successfully }
+ *       200: { description: Updated }
  *       400: { description: Validation error }
  *       404: { description: Not found }
  */
-router.put("/:id", validateRequest(shiftSchemas.update), shiftController.updateShift);
+router.put(
+  "/:id",
+  writeLimiter,
+  validateRequest(shiftSchemas.paramsWithId),
+  validateRequest(shiftSchemas.update),
+  shiftController.updateShift
+);
 
 /**
  * @openapi
@@ -194,18 +129,14 @@ router.put("/:id", validateRequest(shiftSchemas.update), shiftController.updateS
  *         required: true
  *         schema: { type: string }
  *     responses:
- *       200:
- *         description: Deletion result wrapped in a response envelope (data is null)
- *         content:
- *           application/json:
- *             schema:
- *               type: object
- *               properties:
- *                 status:  { type: string, example: success }
- *                 data:    { nullable: true, example: null }
- *                 message: { type: string, example: Shift deleted successfully }
+ *       200: { description: Deleted }
  *       404: { description: Not found }
  */
-router.delete("/:id", validateRequest(shiftSchemas.paramsWithId), shiftController.deleteShift);
+router.delete(
+  "/:id",
+  writeLimiter,
+  validateRequest(shiftSchemas.paramsWithId),
+  shiftController.deleteShift
+);
 
 export default router;

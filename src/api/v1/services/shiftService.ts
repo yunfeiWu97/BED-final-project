@@ -10,96 +10,205 @@ import {
   CreateShiftInput,
   UpdateShiftInput,
 } from "../models/shiftModel";
+import { Adjustment } from "../models/adjustmentModel";
 
-/**
- * Name of the Firestore collection that stores Shift documents.
- */
 const COLLECTION_NAME = "shifts";
 
-/**
- * Aggregate totals for shifts.
- * - `byDay`: total hours per calendar day in "YYYY-MM-DD" format.
- * - `byMonth`: total hours per calendar month in "YYYY-MM" format.
- */
+/** An item enriched with computed fields for presentation. */
+export interface ShiftWithComputed extends Shift {
+  /** Duration in hours (rounded to 2 decimals). */
+  hours: number;
+  /**
+   * Effective pay for the shift (rounded to 2 decimals).
+   * Formula: hours × employerRate + tips + sum(attached adjustments).
+   */
+  pay: number;
+}
+
+/** Totals container used by GET /shifts?includeTotals=true. */
 export interface ShiftTotals {
-  byDay: Record<string, number>;
-  byMonth: Record<string, number>;
+  byDay: Record<string, { hours: number; pay: number }>;
+  byMonth: Record<string, { hours: number; pay: number }>;
 }
 
 /**
  * Convert a Firestore Timestamp-like value or a Date into a Date.
- * This supports plain Date objects and Firestore Timestamp objects.
+ * Supports plain Date and Firestore Timestamp objects.
  * @param value - Unknown value that should represent a date/time.
- * @returns A JavaScript Date instance.
+ * @returns A JavaScript Date.
  */
 const toDateFromUnknown = (value: unknown): Date => {
-  const timestampLike = value as { toDate?: () => Date };
-  if (timestampLike && typeof timestampLike.toDate === "function") {
-    return timestampLike.toDate() as Date;
+  const maybeTimestamp = value as { toDate?: () => Date };
+  if (maybeTimestamp && typeof maybeTimestamp.toDate === "function") {
+    return maybeTimestamp.toDate() as Date;
   }
   return value as Date;
 };
 
-/**
- * Format a Date as an ISO date string (YYYY-MM-DD).
- * @param date - The date to format.
- */
-const formatIsoDate = (date: Date): string => date.toISOString().slice(0, 10);
+/** Format helpers for grouping keys. */
+const formatIsoDate = (date: Date): string => date.toISOString().slice(0, 10); // YYYY-MM-DD
+const formatYearMonth = (date: Date): string => date.toISOString().slice(0, 7); // YYYY-MM
 
-/**
- * Format a Date as a year-month key (YYYY-MM).
- * @param date - The date to format.
- */
-const formatYearMonth = (date: Date): string => date.toISOString().slice(0, 7);
-
-/**
- * Convert a duration in milliseconds to hours as a floating point number.
- * @param milliseconds - Duration in milliseconds.
- */
+/** Convert milliseconds to hours and round to 2 decimals. */
 const millisecondsToHours = (milliseconds: number): number =>
-  milliseconds / 3_600_000;
+  Math.round((milliseconds / 3_600_000) * 100) / 100;
 
 /**
- * Compute daily and monthly hour totals for a list of shifts.
- * @param shifts - The list of shifts to aggregate.
- * @returns Totals grouped by day and by month.
+ * Load an employer's hourly rate.
+ * Supports both `rate` and `hourlyRate` field names and falls back to 0.
+ * @param employerId - Employer identifier.
+ * @returns Numeric hourly rate (>= 0).
  */
-const aggregateShiftTotals = (shifts: Shift[]): ShiftTotals => {
-  const byDay: Record<string, number> = {};
-  const byMonth: Record<string, number> = {};
-
-  for (const shift of shifts) {
-    const durationMilliseconds =
-      shift.endTime.getTime() - shift.startTime.getTime();
-    const durationHours = millisecondsToHours(durationMilliseconds);
-
-    const dayKey = formatIsoDate(shift.startTime);
-    const monthKey = formatYearMonth(shift.startTime);
-
-    byDay[dayKey] = (byDay[dayKey] ?? 0) + durationHours;
-    byMonth[monthKey] = (byMonth[monthKey] ?? 0) + durationHours;
-  }
-
-  return { byDay, byMonth };
+const getEmployerHourlyRate = async (employerId: string): Promise<number> => {
+  const document = await getDocumentById("employers", employerId);
+  const data = document?.data?.();
+  if (!data) return 0;
+  const candidate = (data.rate ?? data.hourlyRate ?? 0) as number;
+  return typeof candidate === "number" && candidate > 0 ? candidate : 0;
 };
 
 /**
- * Retrieve all shifts for a specific user.  
- * Optionally filter by employer and optionally include aggregated hour totals.
+ * Compute base {hours, pay} for a shift using the given hourly rate.
+ * This base pay does NOT include adjustments; callers can add them.
+ * @param shift - The shift to evaluate.
+ * @param employerRate - Employer hourly rate.
+ * @returns An object with hours and pay (rounded to 2 decimals).
+ */
+const computeBaseHoursAndPay = (
+  shift: Shift,
+  employerRate: number
+): { hours: number; pay: number } => {
+  const milliseconds = shift.endTime.getTime() - shift.startTime.getTime();
+  const hours = millisecondsToHours(milliseconds);
+  const basePayUnrounded = hours * employerRate + (shift.tips ?? 0);
+  const pay = Math.round(basePayUnrounded * 100) / 100;
+  return { hours, pay };
+};
+
+/**
+ * Aggregate totals by a key selector.
+ * @param items - List of enriched shifts.
+ * @param keySelector - Function mapping shift -> grouping key.
+ * @returns A record keyed by group with {hours, pay}.
+ */
+const aggregateTotals = (
+  items: ShiftWithComputed[],
+  keySelector: (shift: ShiftWithComputed) => string
+): Record<string, { hours: number; pay: number }> => {
+  const totals: Record<string, { hours: number; pay: number }> = {};
+  for (const shiftItem of items) {
+    const groupingKey = keySelector(shiftItem);
+    if (!totals[groupingKey]) totals[groupingKey] = { hours: 0, pay: 0 };
+    totals[groupingKey].hours += shiftItem.hours;
+    totals[groupingKey].pay += shiftItem.pay;
+  }
+  // Round for presentation
+  for (const key of Object.keys(totals)) {
+    totals[key].hours = Math.round(totals[key].hours * 100) / 100;
+    totals[key].pay = Math.round(totals[key].pay * 100) / 100;
+  }
+  return totals;
+};
+
+/**
+ * Add a single (hours, pay) pair into day/month totals using the given date.
+ * @param totals - Totals object to mutate.
+ * @param bucketDate - Date used for day/month bucketing.
+ * @param hours - Hours to add.
+ * @param pay - Pay to add.
+ */
+const addToTotals = (
+  totals: ShiftTotals,
+  bucketDate: Date,
+  hours: number,
+  pay: number
+): void => {
+  const dayKey = formatIsoDate(bucketDate);
+  const monthKey = formatYearMonth(bucketDate);
+
+  const dayEntry = totals.byDay[dayKey] ?? { hours: 0, pay: 0 };
+  totals.byDay[dayKey] = {
+    hours: Math.round((dayEntry.hours + hours) * 100) / 100,
+    pay: Math.round((dayEntry.pay + pay) * 100) / 100,
+  };
+
+  const monthEntry = totals.byMonth[monthKey] ?? { hours: 0, pay: 0 };
+  totals.byMonth[monthKey] = {
+    hours: Math.round((monthEntry.hours + hours) * 100) / 100,
+    pay: Math.round((monthEntry.pay + pay) * 100) / 100,
+  };
+};
+
+/**
+ * Partition all adjustments owned by the user into:
+ *  - attachedToShift: Map<shiftId, sum(amount)>
+ *  - looseByDate:    Map<YYYY-MM-DD, sum(amount)> (no shiftId)
+ *
+ * Rules:
+ *  - Adjustments with shiftId are added into that shift's pay.
+ *  - Adjustments without shiftId do not change any single shift,
+ *    but they must be included in totals' pay (hours unchanged).
+ *
+ * @param ownerUserId - Firebase Authentication user identifier.
+ */
+const partitionAdjustments = async (
+  ownerUserId: string
+): Promise<{
+  attachedToShift: Map<string, number>;
+  looseByDate: Map<string, number>;
+}> => {
+  const snapshot = await getDocuments("adjustments");
+
+  const attachedToShift = new Map<string, number>();
+  const looseByDate = new Map<string, number>();
+
+  for (const document of snapshot.docs) {
+    const raw = document.data() as Omit<Adjustment, "id">;
+    if (raw.ownerUserId !== ownerUserId) continue;
+
+    const amount = Number(raw.amount) || 0;
+    const date = toDateFromUnknown(raw.date);
+
+    if (raw.shiftId) {
+      const previous = attachedToShift.get(raw.shiftId) ?? 0;
+      attachedToShift.set(raw.shiftId, previous + amount);
+    } else {
+      const key = formatIsoDate(date);
+      const previous = looseByDate.get(key) ?? 0;
+      looseByDate.set(key, previous + amount);
+    }
+  }
+
+  return { attachedToShift, looseByDate };
+};
+
+/**
+ * Retrieve all shifts for a specific user.
+ * Optionally filter by employer and optionally include aggregated totals.
+ *
+ * Each returned item includes:
+ *  - hours: duration in hours
+ *  - pay:   hours × employerRate + tips + sum(attached adjustments)
+ *
+ * When includeTotals is true, response also contains:
+ *  - totals.byDay[YYYY-MM-DD]  = {hours, pay}
+ *  - totals.byMonth[YYYY-MM]   = {hours, pay}
+ *   (loose adjustments without shiftId are added to totals' pay only)
  *
  * @param ownerUserId - Firebase Authentication user identifier of the owner.
- * @param options - Optional filters and aggregation options.
- * @param options.employerId - If provided, only shifts for this employer are returned.
- * @param options.includeTotals - If true, `totals` with daily and monthly hour aggregates is included.
- * @returns An object with `items` (the list of shifts) and optional `totals`.
+ * @param options - Filtering and aggregation options.
+ * @param options.employerId - Optional employer filter.
+ * @param options.includeTotals - Whether to include grouped totals.
  */
 export const getAllShifts = async (
   ownerUserId: string,
   options?: { employerId?: string; includeTotals?: boolean }
-): Promise<{ items: Shift[]; totals?: ShiftTotals }> => {
+): Promise<{ items: ShiftWithComputed[]; totals?: ShiftTotals }> => {
+  // Load all shift documents (Milestone 1: simple read, filter in memory)
   const snapshot = await getDocuments(COLLECTION_NAME);
 
-  const items: Shift[] = snapshot.docs
+  // Map raw docs to Shift model and filter by owner / employer
+  const userShifts: Shift[] = snapshot.docs
     .map((document) => {
       const data = document.data() as Omit<Shift, "id">;
       return {
@@ -118,15 +227,50 @@ export const getAllShifts = async (
       options?.employerId ? shift.employerId === options.employerId : true
     );
 
-  if (options?.includeTotals) {
-    return { items, totals: aggregateShiftTotals(items) };
+  // Preload adjustments (partitioned) and cache employer rates.
+  const [adjustmentPartitions] = await Promise.all([
+    partitionAdjustments(ownerUserId),
+  ]);
+  const employerRateCache = new Map<string, number>();
+
+  // Build enriched items with attached adjustments applied to pay.
+  const enrichedItems: ShiftWithComputed[] = [];
+  for (const shiftItem of userShifts) {
+    let employerRate = employerRateCache.get(shiftItem.employerId);
+    if (employerRate === undefined) {
+      employerRate = await getEmployerHourlyRate(shiftItem.employerId);
+      employerRateCache.set(shiftItem.employerId, employerRate);
+    }
+
+    const { hours, pay } = computeBaseHoursAndPay(shiftItem, employerRate);
+    const attachedDelta = adjustmentPartitions.attachedToShift.get(shiftItem.id) ?? 0;
+    const finalPay = Math.round((pay + attachedDelta) * 100) / 100;
+
+    enrichedItems.push({ ...shiftItem, hours, pay: finalPay });
   }
-  return { items };
+
+  if (!options?.includeTotals) {
+    return { items: enrichedItems };
+  }
+
+  // Start from shift-based totals.
+  const totals: ShiftTotals = {
+    byDay: aggregateTotals(enrichedItems, (s) => formatIsoDate(s.startTime)),
+    byMonth: aggregateTotals(enrichedItems, (s) => formatYearMonth(s.startTime)),
+  };
+
+  // Add loose adjustments (no shiftId) into totals' pay only (hours remain unchanged).
+  for (const [dayKey, delta] of adjustmentPartitions.looseByDate.entries()) {
+    const bucketDate = new Date(`${dayKey}T00:00:00.000Z`);
+    addToTotals(totals, bucketDate, 0, delta);
+  }
+
+  return { items: enrichedItems, totals };
 };
 
 /**
- * Create a new shift for a specific user.  
- * Incoming times are ISO strings at the API boundary and are converted to Date objects here.
+ * Create a new shift for a specific user.
+ * Incoming times are normalized to ISO by validator; convert to Date here.
  *
  * @param ownerUserId - Firebase Authentication user identifier of the owner.
  * @param input - Fields allowed from client requests.
@@ -147,20 +291,15 @@ export const createShift = async (
     updatedAt: now,
   };
 
-  const createdIdentifier = await createDocument<Shift>(
-    COLLECTION_NAME,
-    payload
-  );
-
-  return structuredClone({ id: createdIdentifier, ...payload } as Shift);
+  const createdId = await createDocument<Shift>(COLLECTION_NAME, payload);
+  return structuredClone({ id: createdId, ...payload } as Shift);
 };
 
 /**
  * Retrieve a single shift by identifier if it belongs to the given user.
  *
  * @param ownerUserId - Firebase Authentication user identifier of the owner.
- * @param shiftId - The identifier of the shift to retrieve.
- * @returns The shift if found and owned by the user.
+ * @param shiftId - Identifier of the shift to retrieve.
  * @throws Error - If the shift does not exist or is owned by another user.
  */
 export const getShiftById = async (
@@ -171,7 +310,6 @@ export const getShiftById = async (
   if (!document?.exists) {
     throw new Error(`Shift with id ${shiftId} not found`);
   }
-
   const data = document.data() as Omit<Shift, "id">;
   if (data.ownerUserId !== ownerUserId) {
     throw new Error(`Shift with id ${shiftId} not found`);
@@ -190,11 +328,11 @@ export const getShiftById = async (
 };
 
 /**
- * Update an existing shift (only the fields that are provided) after verifying ownership.  
+ * Update an existing shift (only the fields that are provided) after verifying ownership.
  * The `updatedAt` field is always refreshed.
  *
  * @param ownerUserId - Firebase Authentication user identifier of the owner.
- * @param shiftId - The identifier of the shift to update.
+ * @param shiftId - Identifier of the shift to update.
  * @param input - A partial update payload. ISO strings for time fields are converted to Date.
  * @returns The updated shift (existing fields merged with changes).
  * @throws Error - If the shift does not exist or is owned by another user.
@@ -224,9 +362,7 @@ export const updateShift = async (
  * Delete a shift after verifying that it belongs to the given user.
  *
  * @param ownerUserId - Firebase Authentication user identifier of the owner.
- * @param shiftId - The identifier of the shift to delete.
- * @returns A promise that resolves when the deletion has completed.
- * @throws Error - If the shift does not exist or is owned by another user.
+ * @param shiftId - Identifier of the shift to delete.
  */
 export const deleteShift = async (
   ownerUserId: string,

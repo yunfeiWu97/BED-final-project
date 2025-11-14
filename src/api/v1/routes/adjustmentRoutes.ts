@@ -2,49 +2,13 @@ import express, { Router } from "express";
 import * as adjustmentController from "../controllers/adjustmentController";
 import { validateRequest } from "../middleware/validate";
 import { adjustmentSchemas } from "../validations/adjustmentValidation";
+import { writeLimiter } from "../../../../config/rateLimitConfig"; 
 
 const router: Router = express.Router();
 
 /**
  * Route group: Adjustments
  * Routes under `/api/v1/adjustments`.
- */
-
-/**
- * @openapi
- * components:
- *   schemas:
- *     Adjustment:
- *       type: object
- *       required: [id, ownerUserId, date, amount, createdAt, updatedAt]
- *       properties:
- *         id:
- *           type: string
- *         ownerUserId:
- *           type: string
- *         date:
- *           type: string
- *           format: date
- *           example: "2025-01-04"
- *         amount:
- *           type: number
- *           example: -15.5
- *         employerId:
- *           type: string
- *           nullable: true
- *         shiftId:
- *           type: string
- *           nullable: true
- *         note:
- *           type: string
- *           maxLength: 200
- *           example: "Tip adjustment"
- *         createdAt:
- *           type: string
- *           format: date-time
- *         updatedAt:
- *           type: string
- *           format: date-time
  */
 
 /**
@@ -124,7 +88,12 @@ router.get("/", adjustmentController.getAllAdjustments);
  *       400:
  *         description: Validation error
  */
-router.post("/", validateRequest(adjustmentSchemas.create), adjustmentController.createAdjustment);
+router.post(
+  "/",
+  writeLimiter,
+  validateRequest(adjustmentSchemas.create),
+  adjustmentController.createAdjustment
+);
 
 /**
  * @openapi
@@ -150,7 +119,11 @@ router.post("/", validateRequest(adjustmentSchemas.create), adjustmentController
  *                 message: { type: string, example: Adjustment successfully retrieved }
  *       404: { description: Not found }
  */
-router.get("/:id", validateRequest(adjustmentSchemas.paramsWithId), adjustmentController.getAdjustmentById);
+router.get(
+  "/:id",
+  validateRequest(adjustmentSchemas.paramsWithId),
+  adjustmentController.getAdjustmentById
+);
 
 /**
  * @openapi
@@ -194,7 +167,12 @@ router.get("/:id", validateRequest(adjustmentSchemas.paramsWithId), adjustmentCo
  *       404:
  *         description: Not found
  */
-router.put("/:id", validateRequest(adjustmentSchemas.update), adjustmentController.updateAdjustment);
+router.put(
+  "/:id",
+  writeLimiter, 
+  validateRequest(adjustmentSchemas.update),
+  adjustmentController.updateAdjustment
+);
 
 /**
  * @openapi
@@ -215,11 +193,21 @@ router.put("/:id", validateRequest(adjustmentSchemas.update), adjustmentControll
  *             schema:
  *               type: object
  *               properties:
- *                 status:  { type: string, example: success }
- *                 data:    { nullable: true, example: null }
- *                 message: { type: string, example: Adjustment deleted successfully }
+ *                 status:  
+ *                    type: string
+ *                    example: success
+ *                 data: 
+ *                    $ref: "#/components/schemas/Adjustment"
+ *                 message: 
+ *                    type: string
+ *                    example: "Adjustment created successfully"
  *       404: { description: Not found }
  */
-router.delete("/:id", validateRequest(adjustmentSchemas.paramsWithId), adjustmentController.deleteAdjustment);
+router.delete(
+  "/:id",
+  writeLimiter,
+  validateRequest(adjustmentSchemas.paramsWithId),
+  adjustmentController.deleteAdjustment
+);
 
 export default router;
