@@ -193,9 +193,14 @@ router.put(
  *             schema:
  *               type: object
  *               properties:
- *                 status:  { type: string, example: success }
- *                 data:    { nullable: true, example: null }
- *                 message: { type: string, example: Adjustment deleted successfully }
+ *                 status:  
+ *                    type: string
+ *                    example: success
+ *                 data: 
+ *                    $ref: "#/components/schemas/Adjustment"
+ *                 message: 
+ *                    type: string
+ *                    example: Adjustment created successfully
  *       404: { description: Not found }
  */
 router.delete(
