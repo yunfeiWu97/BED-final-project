@@ -20,24 +20,17 @@ const router: Router = express.Router();
  *     parameters:
  *       - in: query
  *         name: employerId
- *         schema:
- *           type: string
+ *         schema: { type: string }
  *         description: Filter by employer id
  *       - in: query
  *         name: includeTotals
- *         schema:
- *           type: string
- *           enum: ["true", "false"]
- *         description: When "true", include daily/monthly hour totals
+ *         schema: { type: boolean, default: false }
+ *         description: When true, include daily/monthly hour totals
  *     responses:
  *       200:
  *         description: Shifts (and optional totals) wrapped in a standard response
  */
-router.get(
-  "/",
-  validateRequest(shiftSchemas.listQuery, { stripQuery: false }),
-  shiftController.getAllShifts
-);
+router.get("/", shiftController.getAllShifts);
 
 /**
  * @openapi
@@ -53,25 +46,13 @@ router.get(
  *             type: object
  *             required: [employerId, startTime, endTime]
  *             properties:
- *               employerId:
- *                 type: string
- *                 example: "emp_123"
- *               startTime:
- *                 type: string
- *                 format: date-time
- *                 example: "2025-01-04T09:00:00Z"
- *               endTime:
- *                 type: string
- *                 format: date-time
- *                 example: "2025-01-04T17:00:00Z"
- *               tips:
- *                 type: number
- *                 example: 20
+ *               employerId: { type: string, example: "emp_123" }
+ *               startTime:  { type: string, format: date-time, example: "2025-01-04T09:00:00Z" }
+ *               endTime:    { type: string, format: date-time, example: "2025-01-04T17:00:00Z" }
+ *               tips:       { type: number, example: 20 }
  *     responses:
- *       201:
- *         description: Created shift wrapped in a response envelope
- *       400:
- *         description: Validation error
+ *       201: { description: Created }
+ *       400: { description: Validation error }
  */
 router.post(
   "/",
@@ -90,13 +71,10 @@ router.post(
  *       - in: path
  *         name: id
  *         required: true
- *         schema:
- *           type: string
+ *         schema: { type: string }
  *     responses:
- *       200:
- *         description: Shift wrapped in a response envelope
- *       404:
- *         description: Not found
+ *       200: { description: OK }
+ *       404: { description: Not found }
  */
 router.get(
   "/:id",
@@ -114,8 +92,7 @@ router.get(
  *       - in: path
  *         name: id
  *         required: true
- *         schema:
- *           type: string
+ *         schema: { type: string }
  *     requestBody:
  *       required: true
  *       content:
@@ -123,27 +100,19 @@ router.get(
  *           schema:
  *             type: object
  *             properties:
- *               employerId:
- *                 type: string
- *               startTime:
- *                 type: string
- *                 format: date-time
- *               endTime:
- *                 type: string
- *                 format: date-time
- *               tips:
- *                 type: number
+ *               employerId: { type: string }
+ *               startTime:  { type: string, format: date-time }
+ *               endTime:    { type: string, format: date-time }
+ *               tips:       { type: number }
  *     responses:
- *       200:
- *         description: Updated shift wrapped in a response envelope
- *       400:
- *         description: Validation error
- *       404:
- *         description: Not found
+ *       200: { description: Updated }
+ *       400: { description: Validation error }
+ *       404: { description: Not found }
  */
 router.put(
   "/:id",
   writeLimiter,
+  validateRequest(shiftSchemas.paramsWithId),
   validateRequest(shiftSchemas.update),
   shiftController.updateShift
 );
@@ -158,13 +127,10 @@ router.put(
  *       - in: path
  *         name: id
  *         required: true
- *         schema:
- *           type: string
+ *         schema: { type: string }
  *     responses:
- *       200:
- *         description: Deletion result wrapped in a response envelope (data is null)
- *       404:
- *         description: Not found
+ *       200: { description: Deleted }
+ *       404: { description: Not found }
  */
 router.delete(
   "/:id",

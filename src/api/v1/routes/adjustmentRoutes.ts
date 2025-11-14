@@ -200,7 +200,7 @@ router.put(
  *                    $ref: "#/components/schemas/Adjustment"
  *                 message: 
  *                    type: string
- *                    example: Adjustment created successfully
+ *                    example: "Adjustment created successfully"
  *       404: { description: Not found }
  */
 router.delete(
