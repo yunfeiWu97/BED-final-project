@@ -20,6 +20,9 @@ import adjustmentRoutes from "./api/v1/routes/adjustmentRoutes";
  */
 const app: Express = express();
 
+// Trust proxy so req.ip / X-Forwarded-For resolve the real client address
+app.set("trust proxy", 1);
+
 app.use(helmet());
 app.use(helmet(getHelmetConfig()));
 app.use(cors());
