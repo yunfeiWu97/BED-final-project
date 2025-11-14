@@ -49,7 +49,6 @@ interface HealthCheckResponse {
   version: string;
 }
 
-
 /**
  * Health check endpoint that returns server status information.
  * @route GET /api/v1/health
