@@ -4,56 +4,94 @@ import { employerSchemas } from "../../src/api/v1/validations/employerValidation
 import { HTTP_STATUS } from "../../src/constants/httpConstants";
 
 describe("Validation Middleware (Employers)", () => {
-  let mockReq: Partial<Request>;
-  let mockRes: Partial<Response>;
-  let mockNext: NextFunction;
+  let mockRequest: Partial<Request>;
+  let mockResponse: Partial<Response>;
+  let nextFunction: NextFunction;
 
   beforeEach(() => {
-    mockReq = { body: {}, params: {}, query: {} };
-    mockRes = {
+    // Arrange
+    mockRequest = { body: {}, params: {}, query: {} };
+    mockResponse = {
       status: jest.fn().mockReturnThis(),
       json: jest.fn(),
     };
-    mockNext = jest.fn();
+    nextFunction = jest.fn();
   });
 
   it("create: passes on valid input and strips unknown fields", () => {
-    mockReq.body = {
+    // Arrange
+    mockRequest.body = {
       name: "RRC",
       hourlyRate: 20,
       extra: "should be stripped",
     };
-    const mw = validateRequest(employerSchemas.create);
+    const validationMiddleware = validateRequest(employerSchemas.create);
 
-    mw(mockReq as Request, mockRes as Response, mockNext);
+    // Act
+    validationMiddleware(
+      mockRequest as Request,
+      mockResponse as Response,
+      nextFunction
+    );
 
-    expect(mockNext).toHaveBeenCalled();
-    expect(mockRes.status).not.toHaveBeenCalled();
-    expect((mockReq.body as any).extra).toBeUndefined();
+    // Assert
+    expect(nextFunction).toHaveBeenCalled();
+    expect(mockResponse.status).not.toHaveBeenCalled();
+    expect((mockRequest.body as any).extra).toBeUndefined();
   });
 
-  it("create: returns 400 when required fields are missing", () => {
-    mockReq.body = { name: "" };
-    const mw = validateRequest(employerSchemas.create);
+  it("create: returns 400 with structured error object when required fields are missing", () => {
+    // Arrange
+    mockRequest.body = { name: "" }; // missing hourlyRate, empty name
+    const validationMiddleware = validateRequest(employerSchemas.create);
 
-    mw(mockReq as Request, mockRes as Response, mockNext);
+    // Act
+    validationMiddleware(
+      mockRequest as Request,
+      mockResponse as Response,
+      nextFunction
+    );
 
-    expect(mockNext).not.toHaveBeenCalled();
-    expect(mockRes.status).toHaveBeenCalledWith(HTTP_STATUS.BAD_REQUEST);
-    expect(mockRes.json).toHaveBeenCalledWith(
+    // Assert
+    expect(nextFunction).not.toHaveBeenCalled();
+    expect(mockResponse.status).toHaveBeenCalledWith(HTTP_STATUS.BAD_REQUEST);
+    expect(mockResponse.json).toHaveBeenCalledWith(
       expect.objectContaining({
-        error: expect.stringContaining("Validation error"),
+        status: "error",
+        error: expect.objectContaining({
+          code: "VALIDATION_ERROR",
+          message: expect.any(String),
+          details: expect.any(Array),
+        }),
+        timestamp: expect.any(String),
       })
     );
   });
 
   it("paramsWithId: returns 400 when id is missing", () => {
-    mockReq.params = {};
-    const mw = validateRequest(employerSchemas.paramsWithId);
+    // Arrange
+    mockRequest.params = {};
+    const validationMiddleware = validateRequest(
+      employerSchemas.paramsWithId
+    );
 
-    mw(mockReq as Request, mockRes as Response, mockNext);
+    // Act
+    validationMiddleware(
+      mockRequest as Request,
+      mockResponse as Response,
+      nextFunction
+    );
 
-    expect(mockNext).not.toHaveBeenCalled();
-    expect(mockRes.status).toHaveBeenCalledWith(HTTP_STATUS.BAD_REQUEST);
+    // Assert
+    expect(nextFunction).not.toHaveBeenCalled();
+    expect(mockResponse.status).toHaveBeenCalledWith(HTTP_STATUS.BAD_REQUEST);
+    expect(mockResponse.json).toHaveBeenCalledWith(
+      expect.objectContaining({
+        status: "error",
+        error: expect.objectContaining({
+          code: "VALIDATION_ERROR",
+        }),
+      })
+    );
   });
 });

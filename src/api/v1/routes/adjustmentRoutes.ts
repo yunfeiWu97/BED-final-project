@@ -82,9 +82,14 @@ router.get("/", adjustmentController.getAllAdjustments);
  *             schema:
  *               type: object
  *               properties:
- *                 status: { type: string, example: success }
- *                 data:   { $ref: '#/components/schemas/Adjustment' }
- *                 message:{ type: string, example: Adjustment created successfully }
+ *                 status:
+ *                   type: string
+ *                   example: "success"
+ *                 data:
+ *                   $ref: "#/components/schemas/Adjustment"
+ *                 message:
+ *                   type: string
+ *                   example: "Adjustment created successfully"
  *       400:
  *         description: Validation error
  */
@@ -114,9 +119,14 @@ router.post(
  *             schema:
  *               type: object
  *               properties:
- *                 status:  { type: string, example: success }
- *                 data:    { $ref: "#/components/schemas/Adjustment" }
- *                 message: { type: string, example: Adjustment successfully retrieved }
+ *                 status:
+ *                   type: string
+ *                   example: "success"
+ *                 data:
+ *                   $ref: "#/components/schemas/Adjustment"
+ *                 message:
+ *                   type: string
+ *                   example: "Adjustment successfully retrieved"
  *       404: { description: Not found }
  */
 router.get(

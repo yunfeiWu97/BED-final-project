@@ -18,3 +18,13 @@ afterEach(() => {
 afterAll(() => {
   jest.resetModules();
 });
+
+/**
+ * Test-only mock for express-rate-limit to avoid option validation noise.
+ * We keep routes intact, just no-op the middleware in Jest.
+ */
+jest.mock("express-rate-limit", () => {
+  const noOp = () => (_req: any, _res: any, next: any) => next();
+  const ipKeyGenerator = () => "test-ip";
+  return { __esModule: true, default: noOp, ipKeyGenerator };
+});

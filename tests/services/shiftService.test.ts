@@ -1,4 +1,3 @@
-// tests/services/shiftService.test.ts
 import * as shiftService from "../../src/api/v1/services/shiftService";
 import * as repo from "../../src/api/v1/repositories/firestoreRepository";
 import { Shift } from "../../src/api/v1/models/shiftModel";
@@ -21,25 +20,54 @@ const baseShiftWithoutId: Omit<Shift, "id"> = {
 describe("shiftService", () => {
   afterEach(() => jest.clearAllMocks());
 
-  test("getAllShifts: returns only current user's shifts; optional filter by employerId", async () => {
-    const documents = [
+  it("getAllShifts: returns only current user's shifts; optional filter by employerId", async () => {
+    // Arrange
+    const shiftDocs = [
       { id: "s1", data: () => ({ ...baseShiftWithoutId }) },
       { id: "s2", data: () => ({ ...baseShiftWithoutId, employerId: EMPLOYER_B }) },
       { id: "s3", data: () => ({ ...baseShiftWithoutId, ownerUserId: OTHER_USER_ID }) },
     ];
-    jest.spyOn(repo, "getDocuments").mockResolvedValue({ docs: documents } as any);
 
-    const resultA = await shiftService.getAllShifts(OWNER_USER_ID, { employerId: EMPLOYER_A });
-    expect(resultA.items.map(s => s.id)).toEqual(["s1"]);
-    expect(typeof resultA.items[0].startTime.getTime).toBe("function");
-    expect(Number.isFinite(resultA.items[0].startTime.getTime())).toBe(true);
+    // getDocuments is used for "shifts" and "adjustments"
+    jest
+      .spyOn(repo, "getDocuments")
+      .mockImplementation(async (collectionName: string) => {
+        if (collectionName === "shifts") return { docs: shiftDocs } as any;
+        if (collectionName === "adjustments") return { docs: [] } as any;
+        return { docs: [] } as any;
+      });
 
-    const resultAll = await shiftService.getAllShifts(OWNER_USER_ID);
-    expect(resultAll.items.map(s => s.id)).toEqual(["s1", "s2"]);
+    // getDocumentById is used by getEmployerHourlyRate("employers", employerId)
+    jest
+      .spyOn(repo, "getDocumentById")
+      .mockImplementation(async (collectionName: string, id: string) => {
+        if (collectionName === "employers") {
+          return {
+            exists: true,
+            id,
+            data: () => ({ hourlyRate: 20 }), // simple fixed rate for test
+          } as any;
+        }
+        return null as any;
+      });
+
+    // Act
+    const filteredByEmployer = await shiftService.getAllShifts(OWNER_USER_ID, {
+      employerId: EMPLOYER_A,
+    });
+    const allOwned = await shiftService.getAllShifts(OWNER_USER_ID);
+
+    // Assert
+    expect(filteredByEmployer.items.map((s) => s.id)).toEqual(["s1"]);
+    expect(typeof filteredByEmployer.items[0].startTime.getTime).toBe("function");
+    expect(Number.isFinite(filteredByEmployer.items[0].startTime.getTime())).toBe(true);
+
+    expect(allOwned.items.map((s) => s.id)).toEqual(["s1", "s2"]);
   });
 
-  test("getAllShifts: includeTotals aggregates hours by day and by month", async () => {
-    const docs = [
+  it("getAllShifts: includeTotals aggregates hours by day and by month (totals are {hours, pay})", async () => {
+    // Arrange
+    const shiftDocs = [
       // Jan 1: 8h
       { id: "s1", data: () => ({ ...baseShiftWithoutId }) },
       // Jan 1: 4h
@@ -51,7 +79,7 @@ describe("shiftService", () => {
           endTime: new Date("2025-01-01T22:00:00Z"),
         }),
       },
-      // Feb 2: 2h, other employer but same owner
+      // Feb 2: 2h, different employer
       {
         id: "s3",
         data: () => ({
@@ -61,7 +89,7 @@ describe("shiftService", () => {
           endTime: new Date("2025-02-02T14:00:00Z"),
         }),
       },
-      // belongs to other user, should be excluded
+      // Excluded: belongs to other user
       {
         id: "sX",
         data: () => ({
@@ -72,19 +100,49 @@ describe("shiftService", () => {
         }),
       },
     ];
-    jest.spyOn(repo, "getDocuments").mockResolvedValue({ docs } as any);
 
-    const { totals } = await shiftService.getAllShifts(OWNER_USER_ID, { includeTotals: true });
+    jest
+      .spyOn(repo, "getDocuments")
+      .mockImplementation(async (collectionName: string) => {
+        if (collectionName === "shifts") return { docs: shiftDocs } as any;
+        if (collectionName === "adjustments") return { docs: [] } as any;
+        return { docs: [] } as any;
+      });
+
+    // Same reason: getEmployerHourlyRate reads employers via getDocumentById
+    jest
+      .spyOn(repo, "getDocumentById")
+      .mockImplementation(async (collectionName: string, id: string) => {
+        if (collectionName === "employers") {
+          return {
+            exists: true,
+            id,
+            data: () => ({ hourlyRate: 20 }),
+          } as any;
+        }
+        return null as any;
+      });
+
+    // Act
+    const { totals } = await shiftService.getAllShifts(OWNER_USER_ID, {
+      includeTotals: true,
+    });
+
+    // Assert
     expect(totals).toBeDefined();
-    expect(totals!.byDay["2025-01-01"]).toBeCloseTo(12, 5); // 8 + 4
-    expect(totals!.byDay["2025-02-02"]).toBeCloseTo(2, 5);
-    expect(totals!.byMonth["2025-01"]).toBeCloseTo(12, 5);
-    expect(totals!.byMonth["2025-02"]).toBeCloseTo(2, 5);
+    // Daily buckets
+    expect(totals!.byDay["2025-01-01"].hours).toBeCloseTo(12, 5); // 8 + 4
+    expect(totals!.byDay["2025-02-02"].hours).toBeCloseTo(2, 5);
+    // Monthly buckets
+    expect(totals!.byMonth["2025-01"].hours).toBeCloseTo(12, 5);
+    expect(totals!.byMonth["2025-02"].hours).toBeCloseTo(2, 5);
   });
 
-  test("createShift: converts ISO strings to Date and returns id", async () => {
+  it("createShift: converts ISO strings to Date and returns id", async () => {
+    // Arrange
     jest.spyOn(repo, "createDocument").mockResolvedValue("new-shift-id");
 
+    // Act
     const created = await shiftService.createShift(OWNER_USER_ID, {
       employerId: EMPLOYER_A,
       startTime: "2025-03-05T09:00:00Z",
@@ -92,53 +150,67 @@ describe("shiftService", () => {
       tips: 5,
     });
 
+    // Assert
     expect(created.id).toBe("new-shift-id");
     expect(created.ownerUserId).toBe(OWNER_USER_ID);
     expect(typeof created.startTime.getTime).toBe("function");
     expect(Number.isFinite(created.endTime.getTime())).toBe(true);
   });
 
-  test("getShiftById: throws when not found", async () => {
+  it("getShiftById: throws when not found", async () => {
+    // Arrange
     jest.spyOn(repo, "getDocumentById").mockResolvedValue(null as any);
+
+    // Act + Assert
     await expect(
       shiftService.getShiftById(OWNER_USER_ID, "missing-id")
     ).rejects.toThrow("Shift with id missing-id not found");
   });
 
-  test("getShiftById: throws when belongs to another user", async () => {
-    const doc = {
+  it("getShiftById: throws when belongs to another user", async () => {
+    // Arrange
+    const documentSnapshot = {
       exists: true,
       id: "s2",
       data: () => ({ ...baseShiftWithoutId, ownerUserId: OTHER_USER_ID }),
     };
-    jest.spyOn(repo, "getDocumentById").mockResolvedValue(doc as any);
+    jest.spyOn(repo, "getDocumentById").mockResolvedValue(documentSnapshot as any);
+
+    // Act + Assert
     await expect(
       shiftService.getShiftById(OWNER_USER_ID, "s2")
     ).rejects.toThrow("Shift with id s2 not found");
   });
 
-  test("updateShift: merges provided fields and updates updatedAt", async () => {
-    const doc = { exists: true, id: "s1", data: () => ({ ...baseShiftWithoutId }) };
-    jest.spyOn(repo, "getDocumentById").mockResolvedValue(doc as any);
+  it("updateShift: merges provided fields and updates updatedAt", async () => {
+    // Arrange
+    const documentSnapshot = { exists: true, id: "s1", data: () => ({ ...baseShiftWithoutId }) };
+    jest.spyOn(repo, "getDocumentById").mockResolvedValue(documentSnapshot as any);
     const updateSpy = jest.spyOn(repo, "updateDocument").mockResolvedValue();
 
+    // Act
     const updated = await shiftService.updateShift(OWNER_USER_ID, "s1", {
       startTime: "2025-01-01T10:00:00Z",
       tips: 20,
     });
 
+    // Assert
     expect(updateSpy).toHaveBeenCalled();
     expect(Number.isFinite(updated.updatedAt.getTime())).toBe(true);
     expect(updated.tips).toBe(20);
     expect(updated.startTime.toISOString()).toBe("2025-01-01T10:00:00.000Z");
   });
 
-  test("deleteShift: deletes after ownership check", async () => {
-    const doc = { exists: true, id: "s1", data: () => ({ ...baseShiftWithoutId }) };
-    jest.spyOn(repo, "getDocumentById").mockResolvedValue(doc as any);
+  it("deleteShift: deletes after ownership check", async () => {
+    // Arrange
+    const documentSnapshot = { exists: true, id: "s1", data: () => ({ ...baseShiftWithoutId }) };
+    jest.spyOn(repo, "getDocumentById").mockResolvedValue(documentSnapshot as any);
     const deleteSpy = jest.spyOn(repo, "deleteDocument").mockResolvedValue();
 
+    // Act
     await shiftService.deleteShift(OWNER_USER_ID, "s1");
+
+    // Assert
     expect(deleteSpy).toHaveBeenCalledWith("shifts", "s1");
   });
 });
