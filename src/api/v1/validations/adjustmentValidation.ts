@@ -2,8 +2,63 @@ import Joi from "joi";
 import { RequestSchema } from "../middleware/validate";
 
 /**
- * Validation schemas for Adjustment requests.
- * Creation requires at least one of employerId or shiftId.
+ * @openapi
+ * tags:
+ *   - name: Adjustments
+ *     description: Manage pay adjustments linked to shifts or employers
+ * components:
+ *   schemas:
+ *     Adjustment:
+ *       type: object
+ *       required:
+ *         - id
+ *         - ownerUserId
+ *         - date
+ *         - amount
+ *         - createdAt
+ *         - updatedAt
+ *       properties:
+ *         id:
+ *           type: string
+ *           example: "adj_123"
+ *         ownerUserId:
+ *           type: string
+ *           example: "demo-user"
+ *         date:
+ *           type: string
+ *           format: date-time
+ *           example: "2025-01-04T00:00:00Z"
+ *         amount:
+ *           type: number
+ *           example: 25.5
+ *         employerId:
+ *           type: string
+ *           nullable: true
+ *           example: "emp_123"
+ *         shiftId:
+ *           type: string
+ *           nullable: true
+ *           example: "shift_456"
+ *         note:
+ *           type: string
+ *           maxLength: 200
+ *           nullable: true
+ *           example: "Tips top-up for busy Friday night"
+ *         createdAt:
+ *           type: string
+ *           format: date-time
+ *           example: "2025-01-04T01:02:03Z"
+ *         updatedAt:
+ *           type: string
+ *           format: date-time
+ *           example: "2025-01-04T02:03:04Z"
+ */
+
+/**
+ * Adjustment validation schemas organized by request type.
+ * - create: POST /api/v1/adjustments
+ * - update: PUT /api/v1/adjustments/:id
+ * - paramsWithId: routes that only need :id params validation
  */
 export const adjustmentSchemas: Record<string, RequestSchema> = {
   // POST /api/v1/adjustments
