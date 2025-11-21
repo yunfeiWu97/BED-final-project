@@ -3,6 +3,7 @@ import * as shiftController from "../controllers/shiftController";
 import { validateRequest } from "../middleware/validate";
 import { shiftSchemas } from "../validations/shiftValidation";
 import { writeLimiter } from "../../../../config/rateLimitConfig";
+import { authenticate } from "../middleware/authenticate";
 
 const router: Router = express.Router();
 
@@ -30,7 +31,7 @@ const router: Router = express.Router();
  *       200:
  *         description: Shifts (and optional totals) wrapped in a standard response
  */
-router.get("/", shiftController.getAllShifts);
+router.get("/", authenticate, shiftController.getAllShifts);
 
 /**
  * @openapi
@@ -56,6 +57,7 @@ router.get("/", shiftController.getAllShifts);
  */
 router.post(
   "/",
+  authenticate,
   writeLimiter,
   validateRequest(shiftSchemas.create),
   shiftController.createShift
@@ -78,6 +80,7 @@ router.post(
  */
 router.get(
   "/:id",
+  authenticate,
   validateRequest(shiftSchemas.paramsWithId),
   shiftController.getShiftById
 );
@@ -111,6 +114,7 @@ router.get(
  */
 router.put(
   "/:id",
+  authenticate,
   writeLimiter,
   validateRequest(shiftSchemas.paramsWithId),
   validateRequest(shiftSchemas.update),
@@ -134,6 +138,7 @@ router.put(
  */
 router.delete(
   "/:id",
+  authenticate,
   writeLimiter,
   validateRequest(shiftSchemas.paramsWithId),
   shiftController.deleteShift

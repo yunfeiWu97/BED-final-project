@@ -4,19 +4,20 @@ import { successResponse } from "../models/responseModel";
 import * as employerService from "../services/employerService";
 
 /**
-* Resolve the current owner user identifier.
-* For Milestone 1 we do not have authentication yet, so we read an optional
-* "x-demo-user-id" header and fall back to "demo-user".
-* @param request - The Express request.
-*/
-const resolveOwnerUserId = (request: Request): string =>
-  (request.header("x-demo-user-id") as string) || "demo-user";
+ * Resolve the current authenticated user identifier from response locals.
+ * This value is set by the authenticate middleware when a valid token is provided.
+ * @param response - The Express response object.
+ * @returns The authenticated user identifier as a string.
+ */
+const resolveOwnerUserId = (response: Response): string => {
+  return String(response.locals.uid);
+};
 
 /**
  * Lists employers for the current user.
- * @param request - Express request
- * @param response - Express response
- * @param next - Express next function
+ * @param request - Express request.
+ * @param response - Express response.
+ * @param next - Express next function.
  */
 export const listEmployers = async (
   request: Request,
@@ -24,7 +25,7 @@ export const listEmployers = async (
   next: NextFunction
 ): Promise<void> => {
   try {
-    const ownerUserId: string = resolveOwnerUserId(request);
+    const ownerUserId: string = resolveOwnerUserId(response);
     const employers = await employerService.getAllEmployers(ownerUserId);
     response
       .status(HTTP_STATUS.OK)
@@ -36,9 +37,9 @@ export const listEmployers = async (
 
 /**
  * Creates a new employer for the current user.
- * @param request - Express request
- * @param response - Express response
- * @param next - Express next function
+ * @param request - Express request.
+ * @param response - Express response.
+ * @param next - Express next function.
  */
 export const createEmployer = async (
   request: Request,
@@ -46,7 +47,7 @@ export const createEmployer = async (
   next: NextFunction
 ): Promise<void> => {
   try {
-    const ownerUserId: string = resolveOwnerUserId(request);
+    const ownerUserId: string = resolveOwnerUserId(response);
     const { name, hourlyRate } = request.body;
 
     const created = await employerService.createEmployer(ownerUserId, {
@@ -63,10 +64,10 @@ export const createEmployer = async (
 };
 
 /**
- * Gets a single employer by id for the current user.
- * @param request - Express request
- * @param response - Express response
- * @param next - Express next function
+ * Gets a single employer by identifier for the current user.
+ * @param request - Express request.
+ * @param response - Express response.
+ * @param next - Express next function.
  */
 export const getEmployer = async (
   request: Request,
@@ -74,7 +75,7 @@ export const getEmployer = async (
   next: NextFunction
 ): Promise<void> => {
   try {
-    const ownerUserId: string = resolveOwnerUserId(request);
+    const ownerUserId: string = resolveOwnerUserId(response);
     const { id } = request.params;
 
     const employer = await employerService.getEmployerById(ownerUserId, id);
@@ -89,9 +90,9 @@ export const getEmployer = async (
 
 /**
  * Updates an employer for the current user.
- * @param request - Express request
- * @param response - Express response
- * @param next - Express next function
+ * @param request - Express request.
+ * @param response - Express response.
+ * @param next - Express next function.
  */
 export const updateEmployer = async (
   request: Request,
@@ -99,7 +100,7 @@ export const updateEmployer = async (
   next: NextFunction
 ): Promise<void> => {
   try {
-    const ownerUserId: string = resolveOwnerUserId(request);
+    const ownerUserId: string = resolveOwnerUserId(response);
     const { id } = request.params;
     const { name, hourlyRate } = request.body;
 
@@ -118,9 +119,9 @@ export const updateEmployer = async (
 
 /**
  * Deletes an employer for the current user.
- * @param request - Express request
- * @param response - Express response
- * @param next - Express next function
+ * @param request - Express request.
+ * @param response - Express response.
+ * @param next - Express next function.
  */
 export const deleteEmployer = async (
   request: Request,
@@ -128,7 +129,7 @@ export const deleteEmployer = async (
   next: NextFunction
 ): Promise<void> => {
   try {
-    const ownerUserId: string = resolveOwnerUserId(request);
+    const ownerUserId: string = resolveOwnerUserId(response);
     const { id } = request.params;
 
     await employerService.deleteEmployer(ownerUserId, id);

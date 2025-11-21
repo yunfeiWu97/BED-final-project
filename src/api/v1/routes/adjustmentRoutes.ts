@@ -2,7 +2,8 @@ import express, { Router } from "express";
 import * as adjustmentController from "../controllers/adjustmentController";
 import { validateRequest } from "../middleware/validate";
 import { adjustmentSchemas } from "../validations/adjustmentValidation";
-import { writeLimiter } from "../../../../config/rateLimitConfig"; 
+import { writeLimiter } from "../../../../config/rateLimitConfig";
+import { authenticate } from "../middleware/authenticate";
 
 const router: Router = express.Router();
 
@@ -42,7 +43,7 @@ const router: Router = express.Router();
  *                   items: { $ref: "#/components/schemas/Adjustment" }
  *                 message: { type: string, example: Adjustments successfully retrieved }
  */
-router.get("/", adjustmentController.getAllAdjustments);
+router.get("/", authenticate, adjustmentController.getAllAdjustments);
 
 /**
  * @openapi
@@ -95,6 +96,7 @@ router.get("/", adjustmentController.getAllAdjustments);
  */
 router.post(
   "/",
+  authenticate,
   writeLimiter,
   validateRequest(adjustmentSchemas.create),
   adjustmentController.createAdjustment
@@ -131,6 +133,7 @@ router.post(
  */
 router.get(
   "/:id",
+  authenticate,
   validateRequest(adjustmentSchemas.paramsWithId),
   adjustmentController.getAdjustmentById
 );
@@ -179,7 +182,8 @@ router.get(
  */
 router.put(
   "/:id",
-  writeLimiter, 
+  authenticate,
+  writeLimiter,
   validateRequest(adjustmentSchemas.update),
   adjustmentController.updateAdjustment
 );
@@ -215,6 +219,7 @@ router.put(
  */
 router.delete(
   "/:id",
+  authenticate,
   writeLimiter,
   validateRequest(adjustmentSchemas.paramsWithId),
   adjustmentController.deleteAdjustment

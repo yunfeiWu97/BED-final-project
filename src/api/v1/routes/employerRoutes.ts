@@ -2,7 +2,8 @@ import { Router } from "express";
 import * as employerController from "../controllers/employerController";
 import { validateRequest } from "../middleware/validate";
 import { employerSchemas } from "../validations/employerValidation";
-import { writeLimiter } from "../../../../config/rateLimitConfig"; 
+import { writeLimiter } from "../../../../config/rateLimitConfig";
+import { authenticate } from "../middleware/authenticate";
 
 const router: Router = Router();
 
@@ -37,7 +38,7 @@ const router: Router = Router();
  *                   type: string
  *                   example: Employers successfully retrieved
  */
-router.get("/", employerController.listEmployers);
+router.get("/", authenticate, employerController.listEmployers);
 
 /**
  * @openapi
@@ -80,6 +81,7 @@ router.get("/", employerController.listEmployers);
  */
 router.post(
   "/",
+  authenticate,
   validateRequest(employerSchemas.create),
   employerController.createEmployer
 );
@@ -118,6 +120,7 @@ router.post(
  */
 router.get(
   "/:id",
+  authenticate,
   validateRequest(employerSchemas.paramsWithId),
   employerController.getEmployer
 );
@@ -171,6 +174,7 @@ router.get(
  */
 router.put(
   "/:id",
+  authenticate,
   writeLimiter,
   validateRequest(employerSchemas.update),
   employerController.updateEmployer
@@ -211,6 +215,7 @@ router.put(
  */
 router.delete(
   "/:id",
+  authenticate,
   writeLimiter,
   validateRequest(employerSchemas.paramsWithId),
   employerController.deleteEmployer
