@@ -43,6 +43,8 @@ const router: Router = express.Router();
  *                   type: array
  *                   items: { $ref: "#/components/schemas/Adjustment" }
  *                 message: { type: string, example: Adjustments successfully retrieved }
+ *       401:
+ *         description: Unauthorized (missing or invalid bearer token)
  */
 router.get("/", authenticate, adjustmentController.getAllAdjustments);
 
@@ -94,6 +96,10 @@ router.get("/", authenticate, adjustmentController.getAllAdjustments);
  *                   example: "Adjustment created successfully"
  *       400:
  *         description: Validation error
+ *       401:
+ *         description: Unauthorized (missing or invalid bearer token)
+ *       403:
+ *         description: Forbidden (required role missing)
  */
 router.post(
   "/",
@@ -131,7 +137,10 @@ router.post(
  *                 message:
  *                   type: string
  *                   example: "Adjustment successfully retrieved"
- *       404: { description: Not found }
+ *       401:
+ *         description: Unauthorized (missing or invalid bearer token)
+ *       404:
+ *         description: Not found
  */
 router.get(
   "/:id",
@@ -179,6 +188,10 @@ router.get(
  *         description: Updated adjustment wrapped in a response envelope
  *       400:
  *         description: Validation error
+ *       401:
+ *         description: Unauthorized (missing or invalid bearer token)
+ *       403:
+ *         description: Forbidden (required role missing)
  *       404:
  *         description: Not found
  */
@@ -218,7 +231,12 @@ router.put(
  *                 message: 
  *                    type: string
  *                    example: "Adjustment created successfully"
- *       404: { description: Not found }
+ *       401:
+ *         description: Unauthorized (missing or invalid bearer token)
+ *       403:
+ *         description: Forbidden (required role missing)
+ *       404:
+ *         description: Not found
  */
 router.delete(
   "/:id",

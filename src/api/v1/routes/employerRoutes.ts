@@ -79,6 +79,10 @@ router.get("/", authenticate, employerController.listEmployers);
  *                   example: Employer created successfully
  *       400:
  *         description: Validation error
+ *       401:
+ *         description: Unauthorized (missing or invalid bearer token)
+ *       403:
+ *         description: Forbidden (required role missing)
  */
 router.post(
   "/",
@@ -117,6 +121,8 @@ router.post(
  *                 message:
  *                   type: string
  *                   example: Employer retrieved successfully
+ *       401:
+ *         description: Unauthorized (missing or invalid bearer token)
  *       404:
  *         description: Not found
  */
@@ -171,6 +177,10 @@ router.get(
  *                   example: Employer updated successfully
  *       400:
  *         description: Validation error
+ *       401:
+ *         description: Unauthorized (missing or invalid bearer token)
+ *       403:
+ *         description: Forbidden (required role missing)
  *       404:
  *         description: Not found
  */
@@ -213,6 +223,10 @@ router.put(
  *                 message:
  *                   type: string
  *                   example: Employer deleted successfully
+ *       401:
+ *         description: Unauthorized (missing or invalid bearer token)
+ *       403:
+ *         description: Forbidden (required role missing)
  *       404:
  *         description: Not found
  */
