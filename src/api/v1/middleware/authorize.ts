@@ -20,7 +20,19 @@ export function authorize(options: { hasRole: string[] }) {
     try {
       const uid = response.locals?.uid as string | undefined;
       const rolesFromLocals = response.locals?.roles as unknown;
-
+      
+      if (!uid) {
+        response.status(HTTP_STATUS.UNAUTHORIZED).json({
+          status: "error",
+          error: {
+            message: "Missing or invalid bearer token",
+            code: "UNAUTHORIZED",
+          },
+          timestamp: new Date().toISOString(),
+        });
+        return;
+      }
+      
       // Default behavior for this project: if authenticated but no roles,
       // treat as a basic "user".
       const effectiveRoles: string[] = Array.isArray(rolesFromLocals)

@@ -70,4 +70,38 @@ describe("authorize middleware", () => {
     // Assert
     expect(next).toHaveBeenCalledTimes(1);
   });
+  
+  // cover 401 when uid is missing
+  test("responds 401 when uid is missing", () => {
+    // Arrange
+    const request = createMockRequest();
+    const response = createMockResponse(); // no uid
+    const next = jest.fn();
+    const mw = authorize({ hasRole: ["user"] });
+
+    // Act
+    mw(request, response, next);
+
+    // Assert
+    expect(next).not.toHaveBeenCalled();
+    expect(response.status).toHaveBeenCalledWith(HTTP_STATUS.UNAUTHORIZED);
+    const payload = response.json.mock.calls[0][0];
+    expect(payload?.status).toBe("error");
+    expect(payload?.error?.code).toBe("UNAUTHORIZED");
+  });
+
+  test("responds 401 when roles exist but uid is missing", () => {
+    // Arrange
+    const request = createMockRequest();
+    const response = createMockResponse({ roles: ["user"] }); // roles set, but no uid
+    const next = jest.fn();
+    const mw = authorize({ hasRole: ["user"] });
+
+    // Act
+    mw(request, response, next);
+
+    // Assert
+    expect(next).not.toHaveBeenCalled();
+    expect(response.status).toHaveBeenCalledWith(HTTP_STATUS.UNAUTHORIZED);
+  });
 });
