@@ -68,6 +68,14 @@ export async function authenticate(
     const decoded = await auth.verifyIdToken(token);
     // Expose the authenticated user identifier for later use.
     response.locals.uid = decoded.uid;
+    
+    const rawRoles = decoded?.roles;
+    if (Array.isArray(rawRoles)) {
+      response.locals.roles = rawRoles;
+    } else if (typeof rawRoles === "string") {
+      response.locals.roles = [rawRoles];
+    }
+
     next();
   } catch {
     response.status(HTTP_STATUS.UNAUTHORIZED).json({
