@@ -4,6 +4,7 @@ import { validateRequest } from "../middleware/validate";
 import { shiftSchemas } from "../validations/shiftValidation";
 import { writeLimiter } from "../../../../config/rateLimitConfig";
 import { authenticate } from "../middleware/authenticate";
+import { authorize } from "../middleware/authorize";
 
 const router: Router = express.Router();
 
@@ -30,6 +31,8 @@ const router: Router = express.Router();
  *     responses:
  *       200:
  *         description: Shifts (and optional totals) wrapped in a standard response
+ *       401:
+ *         description: Unauthorized (missing or invalid bearer token)
  */
 router.get("/", authenticate, shiftController.getAllShifts);
 
@@ -52,12 +55,19 @@ router.get("/", authenticate, shiftController.getAllShifts);
  *               endTime:    { type: string, format: date-time, example: "2025-01-04T17:00:00Z" }
  *               tips:       { type: number, example: 20 }
  *     responses:
- *       201: { description: Created }
- *       400: { description: Validation error }
+ *       201:
+ *         description: Created
+ *       400:
+ *         description: Validation error
+ *       401:
+ *         description: Unauthorized (missing or invalid bearer token)
+ *       403:
+ *         description: Forbidden (required role missing)
  */
 router.post(
   "/",
   authenticate,
+  authorize({ hasRole: ["user"] }),
   writeLimiter,
   validateRequest(shiftSchemas.create),
   shiftController.createShift
@@ -75,8 +85,12 @@ router.post(
  *         required: true
  *         schema: { type: string }
  *     responses:
- *       200: { description: OK }
- *       404: { description: Not found }
+ *       200:
+ *         description: OK
+ *       401:
+ *         description: Unauthorized (missing or invalid bearer token)
+ *       404:
+ *         description: Not found
  */
 router.get(
   "/:id",
@@ -108,13 +122,21 @@ router.get(
  *               endTime:    { type: string, format: date-time }
  *               tips:       { type: number }
  *     responses:
- *       200: { description: Updated }
- *       400: { description: Validation error }
- *       404: { description: Not found }
+ *       200:
+ *         description: Updated
+ *       400:
+ *         description: Validation error
+ *       401:
+ *         description: Unauthorized (missing or invalid bearer token)
+ *       403:
+ *         description: Forbidden (required role missing)
+ *       404:
+ *         description: Not found
  */
 router.put(
   "/:id",
   authenticate,
+  authorize({ hasRole: ["user"] }),
   writeLimiter,
   validateRequest(shiftSchemas.paramsWithId),
   validateRequest(shiftSchemas.update),
@@ -133,12 +155,19 @@ router.put(
  *         required: true
  *         schema: { type: string }
  *     responses:
- *       200: { description: Deleted }
- *       404: { description: Not found }
+ *       200:
+ *         description: Deleted
+ *       401:
+ *         description: Unauthorized (missing or invalid bearer token)
+ *       403:
+ *         description: Forbidden (required role missing)
+ *       404:
+ *         description: Not found
  */
 router.delete(
   "/:id",
   authenticate,
+  authorize({ hasRole: ["user"] }),
   writeLimiter,
   validateRequest(shiftSchemas.paramsWithId),
   shiftController.deleteShift
