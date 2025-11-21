@@ -4,6 +4,7 @@ import { validateRequest } from "../middleware/validate";
 import { shiftSchemas } from "../validations/shiftValidation";
 import { writeLimiter } from "../../../../config/rateLimitConfig";
 import { authenticate } from "../middleware/authenticate";
+import { authorize } from "../middleware/authorize";
 
 const router: Router = express.Router();
 
@@ -58,6 +59,7 @@ router.get("/", authenticate, shiftController.getAllShifts);
 router.post(
   "/",
   authenticate,
+  authorize({ hasRole: ["user"] }),
   writeLimiter,
   validateRequest(shiftSchemas.create),
   shiftController.createShift
@@ -115,6 +117,7 @@ router.get(
 router.put(
   "/:id",
   authenticate,
+  authorize({ hasRole: ["user"] }),
   writeLimiter,
   validateRequest(shiftSchemas.paramsWithId),
   validateRequest(shiftSchemas.update),
@@ -139,6 +142,7 @@ router.put(
 router.delete(
   "/:id",
   authenticate,
+  authorize({ hasRole: ["user"] }),
   writeLimiter,
   validateRequest(shiftSchemas.paramsWithId),
   shiftController.deleteShift

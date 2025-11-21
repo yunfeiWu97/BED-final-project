@@ -4,6 +4,7 @@ import { validateRequest } from "../middleware/validate";
 import { adjustmentSchemas } from "../validations/adjustmentValidation";
 import { writeLimiter } from "../../../../config/rateLimitConfig";
 import { authenticate } from "../middleware/authenticate";
+import { authorize } from "../middleware/authorize";
 
 const router: Router = express.Router();
 
@@ -97,6 +98,7 @@ router.get("/", authenticate, adjustmentController.getAllAdjustments);
 router.post(
   "/",
   authenticate,
+  authorize({ hasRole: ["user"] }), 
   writeLimiter,
   validateRequest(adjustmentSchemas.create),
   adjustmentController.createAdjustment
@@ -183,6 +185,7 @@ router.get(
 router.put(
   "/:id",
   authenticate,
+  authorize({ hasRole: ["user"] }),
   writeLimiter,
   validateRequest(adjustmentSchemas.update),
   adjustmentController.updateAdjustment
@@ -220,6 +223,7 @@ router.put(
 router.delete(
   "/:id",
   authenticate,
+  authorize({ hasRole: ["user"] }),
   writeLimiter,
   validateRequest(adjustmentSchemas.paramsWithId),
   adjustmentController.deleteAdjustment

@@ -4,6 +4,7 @@ import { validateRequest } from "../middleware/validate";
 import { employerSchemas } from "../validations/employerValidation";
 import { writeLimiter } from "../../../../config/rateLimitConfig";
 import { authenticate } from "../middleware/authenticate";
+import { authorize } from "../middleware/authorize"; 
 
 const router: Router = Router();
 
@@ -82,6 +83,7 @@ router.get("/", authenticate, employerController.listEmployers);
 router.post(
   "/",
   authenticate,
+  authorize({ hasRole: ["user"] }),
   validateRequest(employerSchemas.create),
   employerController.createEmployer
 );
@@ -175,6 +177,7 @@ router.get(
 router.put(
   "/:id",
   authenticate,
+  authorize({ hasRole: ["user"] }),
   writeLimiter,
   validateRequest(employerSchemas.update),
   employerController.updateEmployer
@@ -216,6 +219,7 @@ router.put(
 router.delete(
   "/:id",
   authenticate,
+  authorize({ hasRole: ["user"] }),
   writeLimiter,
   validateRequest(employerSchemas.paramsWithId),
   employerController.deleteEmployer
