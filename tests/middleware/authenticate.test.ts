@@ -6,14 +6,15 @@
 import { authenticate } from "../../src/api/v1/middleware/authenticate";
 import { HTTP_STATUS } from "../../src/constants/httpConstants";
 
-// Mock Firebase Admin auth
-const verifyIdToken = jest.fn();
+// 1) Mock firebaseConfig BEFORE importing and referencing its members.
+//    Create the jest.fn() inside the factory to avoid TDZ issues.
+jest.mock("../../config/firebaseConfig", () => ({
+  auth: { verifyIdToken: jest.fn() },
+}));
 
-jest.mock("../../config/firebaseConfig", () => {
-  return {
-    auth: { verifyIdToken },
-  };
-});
+// 2) Now import the mocked module and get a typed handle to the mock.
+import { auth } from "../../config/firebaseConfig";
+const getVerifyIdTokenMock = (): jest.Mock => auth.verifyIdToken as unknown as jest.Mock;
 
 function createMockResponse() {
   const locals: Record<string, unknown> = {};
@@ -76,13 +77,13 @@ describe("authenticate middleware", () => {
     const request = createMockRequest({ Authorization: "Bearer valid-token" });
     const response = createMockResponse();
     const next = jest.fn();
-    verifyIdToken.mockResolvedValueOnce({ uid: "user-123" });
+    getVerifyIdTokenMock().mockResolvedValueOnce({ uid: "user-123" });
 
     // Act
     await authenticate(request, response, next);
 
     // Assert
-    expect(verifyIdToken).toHaveBeenCalledWith("valid-token");
+    expect(getVerifyIdTokenMock()).toHaveBeenCalledWith("valid-token");
     expect(response.locals.uid).toBe("user-123");
     expect(next).toHaveBeenCalledTimes(1);
     expect(response.status).not.toHaveBeenCalled();
@@ -93,7 +94,7 @@ describe("authenticate middleware", () => {
     const request = createMockRequest({ Authorization: "Bearer bad-token" });
     const response = createMockResponse();
     const next = jest.fn();
-    verifyIdToken.mockRejectedValueOnce(new Error("invalid"));
+    getVerifyIdTokenMock().mockRejectedValueOnce(new Error("invalid"));
 
     // Act
     await authenticate(request, response, next);
