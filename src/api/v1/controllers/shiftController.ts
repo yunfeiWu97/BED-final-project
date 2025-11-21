@@ -4,14 +4,14 @@ import { successResponse } from "../models/responseModel";
 import * as shiftService from "../services/shiftService";
 
 /**
- * Resolve the current owner user identifier.
- * For Milestone 1 we do not have authentication yet, so we read an optional
- * "x-demo-user-id" header and fall back to "demo-user".
- * @param request - The Express request object.
- * @returns The resolved user id to filter user-owned data.
+ * Resolve the current authenticated user identifier from response locals.
+ * This value is set by the authenticate middleware when a valid token is provided.
+ * @param response - The Express response object.
+ * @returns The authenticated user identifier as a string.
  */
-const resolveOwnerUserId = (request: Request): string =>
-  (request.header("x-demo-user-id") as string) || "demo-user";
+const resolveOwnerUserId = (response: Response): string => {
+  return String(response.locals.uid);
+};
 
 /**
  * Parse any query value into a boolean.
@@ -34,14 +34,6 @@ function parseBooleanQuery(raw: unknown): boolean {
 /**
  * GET /api/v1/shifts
  * List shifts for the current user.
- *
- * Query parameters:
- * - employerId?: string      Filter by employer id.
- * - includeTotals?: boolean  When true, include {hours, pay} grouped by day and month.
- *
- * Response:
- * - items: Shift[] each enriched with {hours, pay}
- * - totals?: { byDay: { [YYYY-MM-DD]: {hours, pay} }, byMonth: { [YYYY-MM]: {hours, pay} } }
  */
 export const getAllShifts = async (
   request: Request,
@@ -49,7 +41,7 @@ export const getAllShifts = async (
   next: NextFunction
 ): Promise<void> => {
   try {
-    const ownerUserId: string = resolveOwnerUserId(request);
+    const ownerUserId: string = resolveOwnerUserId(response);
     const employerId: string | undefined =
       typeof request.query.employerId === "string"
         ? request.query.employerId
@@ -75,12 +67,6 @@ export const getAllShifts = async (
 /**
  * POST /api/v1/shifts
  * Create a new shift for the current user.
- *
- * Body:
- * - employerId: string
- * - startTime: string (human-friendly OR ISO; normalized by validator to ISO)
- * - endTime:   string (human-friendly OR ISO; normalized by validator to ISO)
- * - tips?: number
  */
 export const createShift = async (
   request: Request,
@@ -88,7 +74,7 @@ export const createShift = async (
   next: NextFunction
 ): Promise<void> => {
   try {
-    const ownerUserId: string = resolveOwnerUserId(request);
+    const ownerUserId: string = resolveOwnerUserId(response);
     const created = await shiftService.createShift(ownerUserId, {
       employerId: request.body.employerId,
       startTime: request.body.startTime,
@@ -114,7 +100,7 @@ export const getShiftById = async (
   next: NextFunction
 ): Promise<void> => {
   try {
-    const ownerUserId: string = resolveOwnerUserId(request);
+    const ownerUserId: string = resolveOwnerUserId(response);
     const shiftId: string = request.params.id;
 
     const shift = await shiftService.getShiftById(ownerUserId, shiftId);
@@ -129,12 +115,6 @@ export const getShiftById = async (
 /**
  * PUT /api/v1/shifts/:id
  * Update an existing shift (only provided fields will be changed).
- *
- * Body (any subset):
- * - employerId?: string
- * - startTime?: string (human-friendly OR ISO; normalized by validator to ISO)
- * - endTime?: string   (human-friendly OR ISO; normalized by validator to ISO)
- * - tips?: number
  */
 export const updateShift = async (
   request: Request,
@@ -142,7 +122,7 @@ export const updateShift = async (
   next: NextFunction
 ): Promise<void> => {
   try {
-    const ownerUserId: string = resolveOwnerUserId(request);
+    const ownerUserId: string = resolveOwnerUserId(response);
     const shiftId: string = request.params.id;
 
     const updated = await shiftService.updateShift(ownerUserId, shiftId, {
@@ -170,7 +150,7 @@ export const deleteShift = async (
   next: NextFunction
 ): Promise<void> => {
   try {
-    const ownerUserId: string = resolveOwnerUserId(request);
+    const ownerUserId: string = resolveOwnerUserId(response);
     const shiftId: string = request.params.id;
 
     await shiftService.deleteShift(ownerUserId, shiftId);
