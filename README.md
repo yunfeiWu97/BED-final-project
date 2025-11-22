@@ -42,7 +42,7 @@ npm test
 * **POST** `/api/v1/shifts` / **PUT** `/api/v1/shifts/:id` / **DELETE** `/api/v1/shifts/:id`
 * **GET** `/api/v1/adjustments[?employerId&shiftId]` / **POST** / **PUT** / **DELETE`**
 
-> All write routes require: `authenticate` → `authorize({ hasRole: ["user"] })` → validation → controller. Services enforce **owner-only** access (404 on other users’ data).
+> All write routes require: `authenticate` → `authorize({ hasRole: ["user"] })` → validation → controller. Services enforce **owner-only** access.
 
 ---
 
