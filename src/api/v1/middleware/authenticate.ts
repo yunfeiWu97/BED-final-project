@@ -69,11 +69,9 @@ export async function authenticate(
     // Expose the authenticated user identifier for later use.
     response.locals.uid = decoded.uid;
     
-    const rawRoles = decoded?.roles;
-    if (Array.isArray(rawRoles)) {
-      response.locals.roles = rawRoles;
-    } else if (typeof rawRoles === "string") {
-      response.locals.roles = [rawRoles];
+    const rolesClaim = (decoded as any)?.roles;
+    if (Array.isArray(rolesClaim)) {
+      response.locals.roles = rolesClaim;    // e.g. ["user"] / ["guest"]
     }
 
     next();
