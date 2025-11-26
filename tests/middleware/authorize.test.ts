@@ -7,15 +7,16 @@ import { authorize } from "../../src/api/v1/middleware/authorize";
 import { HTTP_STATUS } from "../../src/constants/httpConstants";
 
 /** Create a minimal mock response object with locals, status, and json. */
-function createMockResponse(initialLocals?: Record<string, unknown>) {
+function createMockResponse(
+  initialLocals?: Record<string, unknown>
+): any {
   const locals: Record<string, unknown> = { ...(initialLocals || {}) };
   const status = jest.fn().mockReturnThis();
   const json = jest.fn().mockReturnThis();
   return { locals, status, json } as any;
 }
 
-/** Create a minimal mock request (not used by logic here). */
-function createMockRequest() {
+function createMockRequest(): any {
   return {} as any;
 }
 

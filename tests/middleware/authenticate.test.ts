@@ -16,7 +16,7 @@ jest.mock("../../config/firebaseConfig", () => ({
 import { auth } from "../../config/firebaseConfig";
 const getVerifyIdTokenMock = (): jest.Mock => auth.verifyIdToken as unknown as jest.Mock;
 
-function createMockResponse() {
+function createMockResponse(): any {
   const locals: Record<string, unknown> = {};
   const status = jest.fn().mockReturnThis();
   const json = jest.fn().mockReturnThis();
@@ -27,12 +27,15 @@ function createMockResponse() {
   } as any;
 }
 
-function createMockRequest(headers?: Record<string, string>) {
+function createMockRequest(headers?: Record<string, string>): any {
   const store = Object.fromEntries(
-    Object.entries(headers || {}).map(([k, v]) => [k.toLowerCase(), v])
+    Object.entries(headers || {}).map(([key, value]) => [
+      key.toLowerCase(),
+      value,
+    ])
   );
   return {
-    header: (name: string) => store[name.toLowerCase()],
+    header: (name: string): string | undefined => store[name.toLowerCase()],
   } as any;
 }
 

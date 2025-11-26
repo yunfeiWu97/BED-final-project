@@ -32,7 +32,7 @@ interface ValidationOptions {
 export const validateRequest = (
   schemas: RequestSchema,
   options: ValidationOptions = {}
-) => {
+): ((req: Request, res: Response, next: NextFunction) => void) => {
   const DEFAULT_STRIP_BODY = true;
   const DEFAULT_STRIP_PARAMS = true;
   const DEFAULT_STRIP_QUERY = false;
@@ -67,8 +67,8 @@ export const validateRequest = (
           options.stripBody ?? DEFAULT_STRIP_BODY
         );
         if (error) {
-          error.details.forEach(d =>
-            errors.push({ part: "Body", message: d.message, path: d.path.join(".") })
+          error.details.forEach(detail =>
+            errors.push({ part: "Body", message: detail.message, path: detail.path.join(".") })
           );
         } else {
           req.body = value;
@@ -83,8 +83,8 @@ export const validateRequest = (
           options.stripParams ?? DEFAULT_STRIP_PARAMS
         );
         if (error) {
-          error.details.forEach(d =>
-            errors.push({ part: "Params", message: d.message, path: d.path.join(".") })
+          error.details.forEach(detail =>
+            errors.push({ part: "Params", message: detail.message, path: detail.path.join(".") })
           );
         } else {
           req.params = value;
@@ -99,8 +99,8 @@ export const validateRequest = (
           options.stripQuery ?? DEFAULT_STRIP_QUERY
         );
         if (error) {
-          error.details.forEach(d =>
-            errors.push({ part: "Query", message: d.message, path: d.path.join(".") })
+          error.details.forEach(detail =>
+            errors.push({ part: "Query", message: detail.message, path: detail.path.join(".") })
           );
         } else {
           req.query = value;
