@@ -44,7 +44,7 @@ export const getAllEmployers = async (
         updatedAt,
       } as Employer;
     })
-    .filter((e) => e.ownerUserId === ownerUserId);
+    .filter((employer) => employer.ownerUserId === ownerUserId);
 
   return employers;
 };

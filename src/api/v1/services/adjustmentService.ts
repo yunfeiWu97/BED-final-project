@@ -60,9 +60,9 @@ export const getAllAdjustments = async (
         updatedAt: toDateFromUnknown(data.updatedAt),
       } as Adjustment;
     })
-    .filter((a) => a.ownerUserId === ownerUserId)
-    .filter((a) => (options?.employerId ? a.employerId === options.employerId : true))
-    .filter((a) => (options?.shiftId ? a.shiftId === options.shiftId : true));
+    .filter((adjustment) => adjustment.ownerUserId === ownerUserId)
+    .filter((adjustment) => (options?.employerId ? adjustment.employerId === options.employerId : true))
+    .filter((adjustment) => (options?.shiftId ? adjustment.shiftId === options.shiftId : true));
 
   return items;
 };

@@ -13,7 +13,9 @@ import { HTTP_STATUS } from "../../../constants/httpConstants";
  * @param options.hasRole - A list of roles that are accepted for this route.
  * @returns An Express middleware that permits or denies based on roles.
  */
-export function authorize(options: { hasRole: string[] }) {
+export function authorize(
+  options: { hasRole: string[] }
+): (request: Request, response: Response, next: NextFunction) => void {
   const requiredRoles = Array.isArray(options?.hasRole) ? options.hasRole : [];
 
   return (request: Request, response: Response, next: NextFunction): void => {
@@ -41,9 +43,12 @@ export function authorize(options: { hasRole: string[] }) {
         ? ["user"]
         : [];
 
-      const isAllowed = requiredRoles.length === 0
-        ? true
-        : requiredRoles.some(r => effectiveRoles.includes(r));
+      const isAllowed: boolean =
+        requiredRoles.length === 0
+          ? true
+          : requiredRoles.some((requiredRole: string) =>
+              effectiveRoles.includes(requiredRole)
+            );
 
       if (!isAllowed) {
         response.status(HTTP_STATUS.FORBIDDEN).json({

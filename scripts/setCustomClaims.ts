@@ -13,8 +13,8 @@ import { auth } from "../config/firebaseConfig";
  * @param email - The user's email address.
  * @param roles - Array of role names to set (e.g., ["user"], ["guest"]).
  */
-async function setClaims(email: string, roles: string[]) {
-  const userRecord  = await auth.getUserByEmail(email);
+async function setClaims(email: string, roles: string[]): Promise<void> {
+  const userRecord = await auth.getUserByEmail(email);
   await auth.setCustomUserClaims(userRecord.uid, { roles });
   console.log(`Set roles for ${email}:`, roles, "uid:", userRecord.uid);
 }
