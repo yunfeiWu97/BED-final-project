@@ -4,11 +4,14 @@ import { successResponse } from "../models/responseModel";
 import * as adjustmentService from "../services/adjustmentService";
 
 /**
- * Temporary helper to obtain the current owner user identifier.
- * Replace with Authentication middleware later (e.g., res.locals.uid).
+ * Resolve the current authenticated user identifier from response locals.
+ * This value is set by the authenticate middleware when a valid token is provided.
+ * @param response - The Express response object.
+ * @returns The authenticated user identifier as a string.
  */
-const resolveOwnerUserId = (request: Request): string =>
-  (request.header("x-demo-user-id") as string) || "demo-user";
+const resolveOwnerUserId = (response: Response): string => {
+  return String(response.locals.uid);
+};
 
 /**
  * GET /api/v1/adjustments
@@ -21,7 +24,7 @@ export const getAllAdjustments = async (
   next: NextFunction
 ): Promise<void> => {
   try {
-    const ownerUserId = resolveOwnerUserId(req);
+    const ownerUserId = resolveOwnerUserId(res);
     const employerId =
       typeof req.query.employerId === "string" ? req.query.employerId : undefined;
     const shiftId =
@@ -50,7 +53,7 @@ export const getAdjustmentById = async (
   next: NextFunction
 ): Promise<void> => {
   try {
-    const ownerUserId = resolveOwnerUserId(req);
+    const ownerUserId = resolveOwnerUserId(res);
     const { id } = req.params;
 
     const item = await adjustmentService.getAdjustmentById(ownerUserId, id);
@@ -73,7 +76,7 @@ export const createAdjustment = async (
   next: NextFunction
 ): Promise<void> => {
   try {
-    const ownerUserId = resolveOwnerUserId(req);
+    const ownerUserId = resolveOwnerUserId(res);
     const { date, amount, employerId, shiftId, note } = req.body;
 
     const created = await adjustmentService.createAdjustment(ownerUserId, {
@@ -102,7 +105,7 @@ export const updateAdjustment = async (
   next: NextFunction
 ): Promise<void> => {
   try {
-    const ownerUserId = resolveOwnerUserId(req);
+    const ownerUserId = resolveOwnerUserId(res);
     const { id } = req.params;
     const { date, amount, employerId, shiftId, note } = req.body;
 
@@ -132,7 +135,7 @@ export const deleteAdjustment = async (
   next: NextFunction
 ): Promise<void> => {
   try {
-    const ownerUserId = resolveOwnerUserId(req);
+    const ownerUserId = resolveOwnerUserId(res);
     const { id } = req.params;
 
     await adjustmentService.deleteAdjustment(ownerUserId, id);

@@ -2,7 +2,9 @@ import { Router } from "express";
 import * as employerController from "../controllers/employerController";
 import { validateRequest } from "../middleware/validate";
 import { employerSchemas } from "../validations/employerValidation";
-import { writeLimiter } from "../../../../config/rateLimitConfig"; 
+import { writeLimiter } from "../../../../config/rateLimitConfig";
+import { authenticate } from "../middleware/authenticate";
+import { authorize } from "../middleware/authorize"; 
 
 const router: Router = Router();
 
@@ -37,7 +39,7 @@ const router: Router = Router();
  *                   type: string
  *                   example: Employers successfully retrieved
  */
-router.get("/", employerController.listEmployers);
+router.get("/", authenticate, employerController.listEmployers);
 
 /**
  * @openapi
@@ -77,9 +79,15 @@ router.get("/", employerController.listEmployers);
  *                   example: Employer created successfully
  *       400:
  *         description: Validation error
+ *       401:
+ *         description: Unauthorized (missing or invalid bearer token)
+ *       403:
+ *         description: Forbidden (required role missing)
  */
 router.post(
   "/",
+  authenticate,
+  authorize({ hasRole: ["user"] }),
   validateRequest(employerSchemas.create),
   employerController.createEmployer
 );
@@ -113,11 +121,14 @@ router.post(
  *                 message:
  *                   type: string
  *                   example: Employer retrieved successfully
+ *       401:
+ *         description: Unauthorized (missing or invalid bearer token)
  *       404:
  *         description: Not found
  */
 router.get(
   "/:id",
+  authenticate,
   validateRequest(employerSchemas.paramsWithId),
   employerController.getEmployer
 );
@@ -166,11 +177,17 @@ router.get(
  *                   example: Employer updated successfully
  *       400:
  *         description: Validation error
+ *       401:
+ *         description: Unauthorized (missing or invalid bearer token)
+ *       403:
+ *         description: Forbidden (required role missing)
  *       404:
  *         description: Not found
  */
 router.put(
   "/:id",
+  authenticate,
+  authorize({ hasRole: ["user"] }),
   writeLimiter,
   validateRequest(employerSchemas.update),
   employerController.updateEmployer
@@ -206,11 +223,17 @@ router.put(
  *                 message:
  *                   type: string
  *                   example: Employer deleted successfully
+ *       401:
+ *         description: Unauthorized (missing or invalid bearer token)
+ *       403:
+ *         description: Forbidden (required role missing)
  *       404:
  *         description: Not found
  */
 router.delete(
   "/:id",
+  authenticate,
+  authorize({ hasRole: ["user"] }),
   writeLimiter,
   validateRequest(employerSchemas.paramsWithId),
   employerController.deleteEmployer

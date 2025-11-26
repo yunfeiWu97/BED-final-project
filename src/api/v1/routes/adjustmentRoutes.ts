@@ -2,7 +2,9 @@ import express, { Router } from "express";
 import * as adjustmentController from "../controllers/adjustmentController";
 import { validateRequest } from "../middleware/validate";
 import { adjustmentSchemas } from "../validations/adjustmentValidation";
-import { writeLimiter } from "../../../../config/rateLimitConfig"; 
+import { writeLimiter } from "../../../../config/rateLimitConfig";
+import { authenticate } from "../middleware/authenticate";
+import { authorize } from "../middleware/authorize";
 
 const router: Router = express.Router();
 
@@ -41,8 +43,10 @@ const router: Router = express.Router();
  *                   type: array
  *                   items: { $ref: "#/components/schemas/Adjustment" }
  *                 message: { type: string, example: Adjustments successfully retrieved }
+ *       401:
+ *         description: Unauthorized (missing or invalid bearer token)
  */
-router.get("/", adjustmentController.getAllAdjustments);
+router.get("/", authenticate, adjustmentController.getAllAdjustments);
 
 /**
  * @openapi
@@ -92,9 +96,15 @@ router.get("/", adjustmentController.getAllAdjustments);
  *                   example: "Adjustment created successfully"
  *       400:
  *         description: Validation error
+ *       401:
+ *         description: Unauthorized (missing or invalid bearer token)
+ *       403:
+ *         description: Forbidden (required role missing)
  */
 router.post(
   "/",
+  authenticate,
+  authorize({ hasRole: ["user"] }), 
   writeLimiter,
   validateRequest(adjustmentSchemas.create),
   adjustmentController.createAdjustment
@@ -127,10 +137,14 @@ router.post(
  *                 message:
  *                   type: string
  *                   example: "Adjustment successfully retrieved"
- *       404: { description: Not found }
+ *       401:
+ *         description: Unauthorized (missing or invalid bearer token)
+ *       404:
+ *         description: Not found
  */
 router.get(
   "/:id",
+  authenticate,
   validateRequest(adjustmentSchemas.paramsWithId),
   adjustmentController.getAdjustmentById
 );
@@ -174,12 +188,18 @@ router.get(
  *         description: Updated adjustment wrapped in a response envelope
  *       400:
  *         description: Validation error
+ *       401:
+ *         description: Unauthorized (missing or invalid bearer token)
+ *       403:
+ *         description: Forbidden (required role missing)
  *       404:
  *         description: Not found
  */
 router.put(
   "/:id",
-  writeLimiter, 
+  authenticate,
+  authorize({ hasRole: ["user"] }),
+  writeLimiter,
   validateRequest(adjustmentSchemas.update),
   adjustmentController.updateAdjustment
 );
@@ -211,10 +231,17 @@ router.put(
  *                 message: 
  *                    type: string
  *                    example: "Adjustment created successfully"
- *       404: { description: Not found }
+ *       401:
+ *         description: Unauthorized (missing or invalid bearer token)
+ *       403:
+ *         description: Forbidden (required role missing)
+ *       404:
+ *         description: Not found
  */
 router.delete(
   "/:id",
+  authenticate,
+  authorize({ hasRole: ["user"] }),
   writeLimiter,
   validateRequest(adjustmentSchemas.paramsWithId),
   adjustmentController.deleteAdjustment
