@@ -30,10 +30,10 @@ describe("authorize middleware", () => {
     const request = createMockRequest();
     const response = createMockResponse({ uid: "u1", roles: ["user"] });
     const next = jest.fn();
-    const mw = authorize({ hasRole: ["user"] });
+    const authorizeMiddleware = authorize({ hasRole: ["user"] });
 
     // Act
-    mw(request, response, next);
+    authorizeMiddleware(request, response, next);
 
     // Assert
     expect(next).toHaveBeenCalledTimes(1);
@@ -45,10 +45,10 @@ describe("authorize middleware", () => {
     const request = createMockRequest();
     const response = createMockResponse({ uid: "u1", roles: ["guest"] });
     const next = jest.fn();
-    const mw = authorize({ hasRole: ["user"] });
+    const authorizeMiddleware = authorize({ hasRole: ["user"] });
 
     // Act
-    mw(request, response, next);
+    authorizeMiddleware(request, response, next);
 
     // Assert
     expect(next).not.toHaveBeenCalled();
@@ -63,10 +63,10 @@ describe("authorize middleware", () => {
     const request = createMockRequest();
     const response = createMockResponse({ uid: "u1" }); // no roles
     const next = jest.fn();
-    const mw = authorize({ hasRole: ["user"] });
+    const authorizeMiddleware = authorize({ hasRole: ["user"] });
 
     // Act
-    mw(request, response, next);
+    authorizeMiddleware(request, response, next);
 
     // Assert
     expect(next).toHaveBeenCalledTimes(1);
@@ -78,10 +78,10 @@ describe("authorize middleware", () => {
     const request = createMockRequest();
     const response = createMockResponse(); // no uid
     const next = jest.fn();
-    const mw = authorize({ hasRole: ["user"] });
+    const authorizeMiddleware = authorize({ hasRole: ["user"] });
 
     // Act
-    mw(request, response, next);
+    authorizeMiddleware(request, response, next);
 
     // Assert
     expect(next).not.toHaveBeenCalled();
@@ -96,10 +96,10 @@ describe("authorize middleware", () => {
     const request = createMockRequest();
     const response = createMockResponse({ roles: ["user"] }); // roles set, but no uid
     const next = jest.fn();
-    const mw = authorize({ hasRole: ["user"] });
+    const authorizeMiddleware = authorize({ hasRole: ["user"] });
 
     // Act
-    mw(request, response, next);
+    authorizeMiddleware(request, response, next);
 
     // Assert
     expect(next).not.toHaveBeenCalled();
